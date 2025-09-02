@@ -1,0 +1,19 @@
+{
+    "id":"chatcmpl-212",
+    "object":"chat.completion.chunk",
+    "created":1753208266,
+    "model":"qwen3:4b",
+    "system_fingerprint":"fp_ollama",
+    "choices":
+    [
+        {
+            "index":0,
+            "delta":{
+                "role":"assistant",
+                "content":"\u003cthink\u003e"
+                },
+            "finish_reason":null
+        }
+    ]
+}
+

@@ -1,0 +1,18 @@
+﻿server:
+  address: "127.0.0.1:11823" #default server address listening to
+  debug: false
+
+provider: # OpenAI api compatible backend  
+  api_key: ""
+  endpoint: "http://127.0.0.1:11434" #default to ollama address
+
+agent:
+  model: "deepseek-r1:7b" #Default
+
+tools:
+  - name: "openmeteo"
+    endpoint: "https://api.open-meteo.com"
+    api_key: ""
+  - name: "clock"
+    endpoint: ""
+    api_key: ""
