@@ -1,3 +1,5 @@
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/odit-bit/jagatai?utm_source=oss&utm_medium=github&utm_campaign=odit-bit%2Fjagatai&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 # Jagatai Agent Server Documentation
 
 ## Overview
