@@ -40,14 +40,18 @@ func Build(ctx context.Context, cfgs []Config) ([]agent.Tool, error) {
 		fn, ok := providers[cfg.Name]
 		if ok {
 			p := fn(cfg)
-			if ok, err := p.Ping(ctx); err != nil {
-				return nil, fmt.Errorf("tools build: %s", err)
-			} else if ok {
-				t = append(t, p.Tooling())
+			if !cfg.DisablePing {
+				if ok, err := p.Ping(ctx); err != nil {
+					return nil, fmt.Errorf("tools build: %s", err)
+				} else if !ok {
+					slog.Warn(fmt.Sprintf("tool build called but not available, maybe forget to register? Name: %s, Endpoint: %s", cfg.Name, cfg.Endpoint))
+					continue //skip add the tool if ping fails
+				}
 			}
+
+			//add tool
+			t = append(t, p.Tooling())
 			slog.Debug("tool initate", "name", cfg.Name, "address", cfg.Endpoint)
-		} else {
-			slog.Warn(fmt.Sprintf("tool build called but not available, maybe forget to register? Name: %s, Endpoint: %s", cfg.Name, cfg.Endpoint))
 		}
 	}
 	if len(t) == 0 {

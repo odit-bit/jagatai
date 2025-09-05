@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	Name     string
-	Endpoint string
-	ApiKey   string
+	Name        string
+	Endpoint    string
+	ApiKey      string
+	DisablePing bool
 }
 
 type Provider interface {

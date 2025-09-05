@@ -15,8 +15,6 @@ import (
 	"github.com/odit-bit/jagatai/agent/tooldef"
 )
 
-
-
 var _ tooldef.Provider = (*WeatherTool)(nil)
 
 type WeatherTool struct {
@@ -135,10 +133,7 @@ func (wt *WeatherTool) Callback(ctx context.Context, fc agent.FunctionCall) (str
 		return "", fmt.Errorf("latitude or longitude cannot be empty")
 	}
 
-	reqCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	curr, err := wt.GetCurrentWeather(reqCtx, param.Latitude, param.Longitude)
+	curr, err := wt.GetCurrentWeather(ctx, param.Latitude, param.Longitude)
 	if err != nil {
 		return "", err
 	}

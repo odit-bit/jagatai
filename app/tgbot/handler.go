@@ -51,8 +51,6 @@ func HandleBot(ctx context.Context, bot *tele.Bot, llmClient *client.Client, cac
 
 		msg, err := Completion(ctx.Chat().ID, cache, llmClient, ctx.Message().Text)
 		if err != nil {
-		}
-		if err != nil {
 			slog.Error("text error", "error", err.Error())
 			return ctx.Send("service unavailable")
 		}
