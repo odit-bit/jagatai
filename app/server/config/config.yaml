@@ -7,7 +7,7 @@ provider: # OpenAI api compatible backend
   endpoint: "http://127.0.0.1:11434" #default to ollama address
 
 agent:
-  model: "deepseek-r1:7b" #Default
+  model: "qwen3:1.7b" #Default
 
 tools:
   - name: "openmeteo"

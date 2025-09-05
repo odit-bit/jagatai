@@ -90,33 +90,32 @@ func (agent *Agent) Completions(ctx context.Context, req CCReq) (*CCRes, error) 
 	}
 
 	// TOOL CALL
-	if !resp.IsToolCall() {
-		slog.Debug("no tool call")
-		return resp, nil
-	}
+	for i := 0; i < agent.toolMaxCall && resp.IsToolCall(); i++ {
+		for _, tc := range resp.Choices[0].Message.Toolcalls {
+			slog.Debug("tool call")
+			toolResp, err := agent.tp.Invoke(ctx, tc)
+			if err != nil {
+				return nil, err
+				// toolResp = fmt.Sprintf("error: %s function failed to invoke", tc.Function.Name)
+			} else {
+				slog.Debug("tool function", "funtion", tc.Function, "resp", toolResp)
+			}
+			req.Messages = append(req.Messages, resp.Choices[0].Message, Message{
+				Role:       "tool",
+				Content:    toolResp,
+				ToolCallID: tc.ID,
+			})
 
-	for _, tc := range resp.Choices[0].Message.Toolcalls {
-		slog.Debug("tool call")
-		toolResp, err := agent.tp.Invoke(ctx, tc)
-		if err != nil {
-			return nil, err
-			// toolResp = fmt.Sprintf("error: %s function failed to invoke", tc.Function.Name)
-		} else {
-			slog.Debug("tool function", "funtion", tc.Function, "resp", toolResp)
 		}
-		req.Messages = append(req.Messages, resp.Choices[0].Message, Message{
-			Role:       "tool",
-			Content:    toolResp,
-			ToolCallID: tc.ID,
-		})
+
+		// call the provider with tools response
+		resp, err = agent.provider.Chat(ctx, req)
+		if err != nil {
+			return nil, fmt.Errorf("agent provider (turn %d): %v", i+1, err)
+		}
 	}
 
-	resp2, err := agent.provider.Chat(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("agent provider: %v", err)
-	}
-	return resp2, nil
-
+	return resp, nil
 }
 
 func (agent *Agent) SetModel(model string) error {
