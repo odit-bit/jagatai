@@ -2,8 +2,8 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,12 +28,14 @@ type ChatResponse struct {
 type Client struct {
 	client   *http.Client
 	Endpoint string
+	key      string
 }
 
 func NewClient(endpoint, key string) *Client {
 	return &Client{
 		client:   http.DefaultClient,
 		Endpoint: endpoint,
+		key:      key,
 	}
 }
 
@@ -45,7 +47,19 @@ func (c *Client) Chat(in ChatRequest) (*ChatResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.client.Post(urlString, "application/json", bytes.NewReader(b))
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, urlString, bytes.NewReader(b))
+	if err != nil {
+		return nil, fmt.Errorf("client failed create request: %v", err)
+	}
+
+	header := http.Header{}
+	header.Set("Content-Type", "application/json")
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", c.key))
+
+	req.Header = header
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +69,7 @@ func (c *Client) Chat(in ChatRequest) (*ChatResponse, error) {
 	if resp.StatusCode > 299 {
 		b, _ := io.ReadAll(resp.Body)
 		// fmt.Printf("> error read body: %s, status: %d", string(b), resp.StatusCode)
-		return nil, errors.New(string(b))
+		return nil, fmt.Errorf("API error: status %d, body: %s", resp.StatusCode, string(b))
 	} else {
 		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 			return nil, err
