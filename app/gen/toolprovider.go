@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"go/build"
 	"html/template"
 	"io/fs"
@@ -73,8 +74,12 @@ func main() {
 
 	t := template.Must(template.New("agg").Parse(templ))
 	var out bytes.Buffer
-	_ = t.Execute(&out, map[string]any{"Imports": imports})
 
+	if err := t.Execute(&out, map[string]any{"Imports": imports}); err != nil {
+		fmt.Fprintf(os.Stderr, "template execute: %v\n", err)
+		os.Exit(1) // Or use slog.Error()
+	}
+	
 	os.WriteFile("agent/toolProvider/init-gen.go", out.Bytes(), 0644)
 }
 

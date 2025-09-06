@@ -33,6 +33,10 @@ func New(model string, provider Provider, opts ...OptionFunc) *Agent {
 		fn(&o)
 	}
 
+	if o.tools == nil {
+		o.tools = ToolsMap{}
+	}
+
 	a := &Agent{
 		mx:          sync.Mutex{},
 		model:       model,
@@ -52,32 +56,6 @@ type CompletionOptions struct {
 type CompletionInput struct {
 	Content string
 }
-
-// func (agent *Agent) Completions(ctx context.Context, req CCReq) (*CCRes, error) {
-
-// 	// req := CCReq{
-// 	// 	Model:      agent.model,
-// 	// 	Messages:   msgs,
-// 	// 	Stream:     opts.Stream,
-// 	// 	Think:      opts.Think,
-// 	// 	Tools:      agent.tp.ToSlice(),
-// 	// 	ToolChoice: "auto",
-// 	// }
-
-// 	resp, err := agent.completions(ctx, req)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("agent completions: %v", err)
-// 	}
-
-// 	slog.Info("chat completions stop", "reason", resp.Choices[0].FinishReason)
-// 	cr := ChatResponse{
-// 		Model:      resp.Model,
-// 		DoneReason: resp.Choices[0].FinishReason,
-// 		CreatedAt:  resp.Created.Time(),
-// 		Message:    resp.Choices[0].Message,
-// 	}
-// 	return &cr, nil
-// }
 
 func (agent *Agent) Completions(ctx context.Context, req CCReq) (*CCRes, error) {
 	req.Model = agent.model
