@@ -23,16 +23,6 @@ type WeatherTool struct {
 	endpoint string
 }
 
-// func NewMeteoWeather(ctx context.Context) *WeatherTool {
-// 	urlEndpoint, _ := url.Parse("https://api.open-meteo.com/v1/forecast")
-// 	wt := WeatherTool{
-// 		// ctx:    ctx,
-// 		client: http.DefaultClient,
-// 		url:    urlEndpoint,
-// 	}
-// 	return &wt
-// }
-
 func NewTooldef(cfg tooldef.Config) tooldef.Provider {
 	urlEndpoint, _ := strings.CutSuffix(cfg.Endpoint, "/")
 	wt := WeatherTool{
@@ -121,23 +111,23 @@ func (wt *WeatherTool) GetCurrentWeather(ctx context.Context, lat, long float64)
 	return &mr.Current, nil
 }
 
-func (wt *WeatherTool) Callback(ctx context.Context, fc agent.FunctionCall) (string, error) {
+func (wt *WeatherTool) Callback(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
 	param := struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{}
 	if err := json.Unmarshal([]byte(fc.Arguments), &param); err != nil {
-		return "", err
+		return nil, err
 	}
 	if param.Latitude == 0 || param.Longitude == 0 {
-		return "", fmt.Errorf("latitude or longitude cannot be empty")
+		return nil, fmt.Errorf("latitude or longitude cannot be empty")
 	}
 
 	curr, err := wt.GetCurrentWeather(ctx, param.Latitude, param.Longitude)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return strconv.FormatFloat(curr.Temp2m, 'f', -1, 64), nil
+	return &agent.ToolResponse{Output: map[string]any{"temperature": curr.Temp2m}}, nil
 }
 
 func (wt *WeatherTool) Tooling() agent.Tool {

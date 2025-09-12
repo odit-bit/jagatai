@@ -9,6 +9,24 @@ import (
 	"github.com/odit-bit/jagatai/agent"
 )
 
+// managing tool life cycle
+
+// configuration for 3rd party tool implementation
+type Config struct {
+	Name        string
+	Endpoint    string
+	ApiKey      string
+	DisablePing bool
+}
+
+// represent tool provider
+type Provider interface {
+	Tooling() agent.Tool
+	Ping(ctx context.Context) (bool, error)
+}
+
+type ProviderFunc func(cfg Config) Provider
+
 var providers = make(map[string]ProviderFunc)
 
 var dmutex sync.RWMutex
@@ -45,6 +63,8 @@ func Build(ctx context.Context, cfgs []Config) ([]agent.Tool, error) {
 		if fn, ok := providers[cfg.Name]; ok {
 			p := fn(cfg)
 			toBuild = append(toBuild, providerToBuild{provider: p, config: cfg})
+		} else {
+			slog.Warn("tool provider initated but not available, forget to register ?")
 		}
 	}
 	dmutex.RUnlock()
@@ -69,8 +89,5 @@ func Build(ctx context.Context, cfgs []Config) ([]agent.Tool, error) {
 		slog.Debug("tool initate", "name", item.config.Name, "address", item.config.Endpoint)
 	}
 
-	if len(t) == 0 {
-		slog.Warn("there is 0 tools provider registered, forget to blank import ? (toolprovider)")
-	}
 	return t, nil
 }

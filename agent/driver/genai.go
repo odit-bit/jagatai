@@ -38,48 +38,35 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 	// log.Println("request: ", string(jsonRequest))
 
 	content := []*genai.Content{}
-
 	sys := genai.Content{}
-	// Message conversion
-	for _, c := range req.Messages {
-		parts := []*genai.Part{}
-		var role string
 
-		switch c.Role {
+	// Message conversion to content
+	for _, msg := range req.Messages {
+		var c *genai.Content
+		var err error
+
+		switch msg.Role {
 		case "system":
-			sys.Parts = []*genai.Part{{Text: c.Content}}
-			continue // Skip appending to content
-		case "assistant":
-			role = genai.RoleModel
-			if c.Content != "" {
-				part := genai.NewPartFromText(c.Content)
-				parts = append(parts, part)
-			} else if len(c.Toolcalls) != 0 {
-				part2 := genai.NewPartFromFunctionCall(
-					c.Toolcalls[0].Function.Name,
-					map[string]any{"arguments": c.Toolcalls[0].Function.Arguments},
-				)
-				parts = append(parts, part2)
-			} else {
-				continue // Skip empty assistant messages that aren't tool calls
+			sys.Parts = []*genai.Part{
+				genai.NewPartFromText(msg.Text),
 			}
+			continue
 
-		case "tool":
-			part := genai.NewPartFromFunctionResponse(
-				c.Toolcalls[0].Function.Name,
-				map[string]any{"output": c.Content},
-			)
-			parts = append(parts, part)
-		case "user":
-			role = genai.RoleUser
-			part := genai.NewPartFromText(c.Content)
-			parts = append(parts, part)
+		case "assistant":
+			c, err = convertAssistant(&msg)
+
+		case "user", "tool":
+			c, err = convertUser(&msg)
+
+		default:
+			err = fmt.Errorf("unknown message type/role: %v", msg.Role)
 		}
 
-		content = append(content, &genai.Content{
-			Parts: parts,
-			Role:  role,
-		})
+		if err != nil {
+			return nil, fmt.Errorf("genai_adapter failed convert agent message: %v", err)
+		}
+
+		content = append(content, c)
 	}
 
 	// jsonResult, _ := json.MarshalIndent(content, "", "  ")
@@ -97,9 +84,6 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 	resp, err := g.cli.Models.GenerateContent(ctx, req.Model, content, &genai.GenerateContentConfig{
 		Tools:             tools,
 		SystemInstruction: &sys,
-		ThinkingConfig: &genai.ThinkingConfig{
-			IncludeThoughts: req.Think,
-		},
 	})
 
 	if err != nil {
@@ -112,7 +96,7 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 	text := ""
 	if resp.FunctionCalls() != nil {
 		for _, v := range resp.FunctionCalls() {
-			tc, err := ToToolCall(v)
+			tc, err := toToolCall(v)
 			if err != nil {
 				return nil, fmt.Errorf("gemini_adapter failed conversion function call: %v", err)
 			}
@@ -130,7 +114,7 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 			{
 				Message: agent.Message{
 					Role:      "assistant",
-					Content:   text,
+					Text:      text,
 					Toolcalls: toolCall,
 				},
 			},
@@ -199,7 +183,7 @@ func ToFunctionDeclaration(t *agent.Tool) *genai.FunctionDeclaration {
 
 // ToToolCall converts a genai.FunctionCall into a ToolCall.
 // It returns an error if the arguments map cannot be marshaled to a JSON string.
-func ToToolCall(fc *genai.FunctionCall) (*agent.ToolCall, error) {
+func toToolCall(fc *genai.FunctionCall) (*agent.ToolCall, error) {
 	if fc == nil {
 		return nil, nil
 	}
@@ -208,7 +192,7 @@ func ToToolCall(fc *genai.FunctionCall) (*agent.ToolCall, error) {
 	// is a string. We need to marshal the map into a JSON string.
 	argumentsJSON, err := json.Marshal(fc.Args)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal function call arguments to JSON: %w", err)
+		return nil, fmt.Errorf("failed to marshal genai function call arguments to JSON: %w", err)
 	}
 
 	toolCall := &agent.ToolCall{
@@ -221,4 +205,78 @@ func ToToolCall(fc *genai.FunctionCall) (*agent.ToolCall, error) {
 	}
 
 	return toolCall, nil
+}
+
+func fromToolCall(tc *agent.ToolCall) (*genai.FunctionCall, error) {
+
+	if tc == nil {
+		return nil, nil
+	}
+
+	argsMap := map[string]any{}
+	err := json.Unmarshal([]byte(tc.Function.Arguments), &argsMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal agent tool call arguments to JSON: %v", err)
+	}
+
+	fc := genai.FunctionCall{
+		ID:   tc.ID,
+		Name: tc.Function.Name,
+		Args: argsMap,
+	}
+	return &fc, nil
+}
+
+// helper for convert agent assistant response message
+func convertAssistant(msg *agent.Message) (*genai.Content, error) {
+	parts := []*genai.Part{}
+
+	//tool call
+	for _, tc := range msg.Toolcalls {
+		fc, err := fromToolCall(&tc)
+		if err != nil {
+			return nil, err
+		}
+		parts = append(parts, genai.NewPartFromFunctionCall(fc.Name, fc.Args))
+	}
+
+	if msg.Text != "" {
+		parts = append(parts, genai.NewPartFromText(msg.Text))
+	}
+
+	c := genai.Content{
+		Role:  genai.RoleModel,
+		Parts: parts,
+	}
+	return &c, nil
+}
+
+func convertUser(msg *agent.Message) (*genai.Content, error) {
+
+	Parts := []*genai.Part{}
+	if msg.Text != "" {
+		Parts = append(Parts, genai.NewPartFromText(msg.Text))
+	}
+
+	if msg.Image != nil {
+		Parts = append(Parts, genai.NewPartFromBytes(
+			msg.Image.Bytes,
+			msg.Image.Mime,
+		))
+	}
+
+	//add
+	if msg.Toolcalls != nil {
+		fcPart := genai.NewPartFromFunctionResponse(
+			msg.Toolcalls[0].Function.Name,
+			msg.ToolResponse.Output,
+		)
+		Parts = append(Parts, fcPart)
+
+	}
+	content := &genai.Content{
+		Role:  genai.RoleUser,
+		Parts: Parts,
+	}
+	return content, nil
 }

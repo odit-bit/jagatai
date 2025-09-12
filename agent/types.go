@@ -5,10 +5,19 @@ import (
 )
 
 type Message struct {
-	Role       string     `json:"role"`
-	Content    string     `json:"content"`
-	ToolCallID string     `json:"tool_call_id,omitempty"`
-	Toolcalls  []ToolCall `json:"tool_calls,omitempty"`
+	Role         string `json:"role"`
+	Text         string
+	Image        *ImageData
+	ToolCallID   string     `json:"tool_call_id,omitempty"`
+	Toolcalls    []ToolCall `json:"tool_calls,omitempty"`
+	ToolResponse *ToolResponse
+}
+
+type ImageData struct {
+	//raw bytes
+	Bytes []byte
+	//IANA standart type
+	Mime string
 }
 
 // ChatCompletionRequest

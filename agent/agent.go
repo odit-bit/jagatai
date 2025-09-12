@@ -15,7 +15,7 @@ type Agent struct {
 	mx       sync.Mutex
 	model    string
 	provider Provider
-	tp       ToolProviders
+	tp       ToolsMap
 
 	toolMaxCall int
 }
@@ -48,6 +48,33 @@ func New(model string, provider Provider, opts ...OptionFunc) *Agent {
 	return a
 }
 
+// hold the tools
+type ToolsMap map[string]Tool
+
+func (t ToolsMap) Invoke(ctx context.Context, fc FunctionCall) (*ToolResponse, error) {
+	tool, ok := t[fc.Name]
+	if !ok {
+		return nil, fmt.Errorf("tools not found")
+	} else {
+		if tool.call == nil {
+			return nil, fmt.Errorf("tool failed invoke function: nil function")
+		}
+		res, err := tool.call(ctx, fc)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	}
+}
+
+func (tm ToolsMap) ToSlice() []Tool {
+	tools := []Tool{}
+	for _, tool := range tm {
+		tools = append(tools, tool)
+	}
+	return tools
+}
+
 type CompletionOptions struct {
 	Think  bool
 	Stream bool
@@ -70,17 +97,20 @@ func (agent *Agent) Completions(ctx context.Context, req *CCReq) (*CCRes, error)
 	// TOOL CALL
 	for i := 0; i < agent.toolMaxCall && resp.IsToolCall(); i++ {
 		for _, tc := range resp.Choices[0].Message.Toolcalls {
-			toolResp, err := agent.tp.Invoke(ctx, tc)
+			toolResp, err := agent.tp.Invoke(ctx, tc.Function)
 			if err != nil {
-				toolResp = fmt.Sprintf("error: %s function failed to invoke", tc.Function.Name)
+				toolResp = &ToolResponse{map[string]any{
+					"error": fmt.Sprintf("error: %s function failed to invoke", tc.Function.Name),
+				}}
 			}
 			slog.Debug("agent_tool_call", "function", tc.Function, "error", err)
 
 			req.Messages = append(req.Messages, resp.Choices[0].Message, Message{
-				Role:       "tool",
-				Content:    toolResp,
-				ToolCallID: tc.ID,
-				Toolcalls:  []ToolCall{tc},
+				Role:         "tool",
+				Text:         "",
+				ToolCallID:   tc.ID,
+				Toolcalls:    []ToolCall{tc},
+				ToolResponse: toolResp,
 			})
 
 		}

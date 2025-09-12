@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 )
 
 const (
@@ -22,7 +21,7 @@ func (t *Tool) SetCallback(fn FunctionCallbackFunc) {
 	t.call = fn
 }
 
-type FunctionCallbackFunc func(ctx context.Context, fn FunctionCall) (string, error)
+type FunctionCallbackFunc func(ctx context.Context, fn FunctionCall) (*ToolResponse, error)
 
 // Function describes the function metadata and its parameter schema.
 type Function struct {
@@ -52,52 +51,13 @@ type ToolCall struct {
 	Function FunctionCall `json:"function"`
 }
 
+// ToolResponse represent tool response entry in the message
+type ToolResponse struct {
+	Output map[string]any
+}
+
 // FunctionCall holds the function name and its raw arguments.
 type FunctionCall struct {
 	Name      string `json:"name"`
 	Arguments string `json:"arguments"`
 }
-
-type ToolProviders interface {
-	Invoke(ctx context.Context, tc ToolCall) (string, error)
-	ToSlice() []Tool
-}
-
-///
-
-type ToolsMap map[string]Tool
-
-func (t ToolsMap) Invoke(ctx context.Context, tc ToolCall) (string, error) {
-	tool, ok := t[tc.Function.Name]
-	if !ok {
-		return "", fmt.Errorf("tools not found")
-	} else {
-		if tool.call == nil {
-			return "", fmt.Errorf("tool failed invoke function: nil function")
-		}
-		res, err := tool.call(ctx, tc.Function)
-		if err != nil {
-			return "", err
-		}
-		return res, nil
-	}
-}
-
-func (tm ToolsMap) ToSlice() []Tool {
-	tools := []Tool{}
-	for _, tool := range tm {
-		tools = append(tools, tool)
-	}
-	return tools
-}
-
-// func (t ToolsMap) MarshalJSON() ([]byte, error) {
-// 	return json.Marshal(t.slice())
-// }
-
-// func (t ToolsMap) UnmarshalJSON(b []byte) error {
-// 	if t == nil {
-// 		t = ToolsMap{}
-// 	}
-// 	return json.Unmarshal(b, &t)
-// }

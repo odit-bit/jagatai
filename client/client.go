@@ -8,12 +8,11 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/odit-bit/jagatai/agent"
 )
 
-type Message struct {
-	Role    string
-	Content string
-}
+type Message agent.Message
 
 type ChatRequest struct {
 	Messages []Message

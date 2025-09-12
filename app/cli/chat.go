@@ -24,8 +24,8 @@ var CompletionsCMD = cobra.Command{
 		res, err := c.Chat(client.ChatRequest{
 			Messages: []client.Message{
 				{
-					Role:    "user",
-					Content: args[0],
+					Role: "user",
+					Text: args[0],
 				},
 			},
 		})
@@ -34,7 +34,7 @@ var CompletionsCMD = cobra.Command{
 			return err
 		}
 
-		fmt.Printf("> %s", res.Message.Content)
+		fmt.Printf("> %s", res.Message.Text)
 		return nil
 	},
 }

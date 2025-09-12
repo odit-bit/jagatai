@@ -10,10 +10,10 @@ import (
 	tele "gopkg.in/telebot.v4"
 )
 
-var sysPromp = "You are usefull assistant, ignore tools or functions for factual questions. Only use tools or function for relevant question. Don't mention if you use tool or not. /no_think"
+var sysPromp = "You are usefull assistant, ignore tools or functions for factual questions. Only use tools or function for relevant question. Don't mention if you use tool or not."
 var sysMsg = client.Message{
-	Role:    "system",
-	Content: sysPromp,
+	Role: "system",
+	Text: sysPromp,
 }
 
 func HandleBot(ctx context.Context, bot *tele.Bot, llmClient *client.Client, cache *ChatCache) {
@@ -89,7 +89,7 @@ func Completion(id int64, cache *ChatCache, ai *client.Client, content string) (
 	/*store chat ID*/
 
 	sc := cache.Get(id)
-	sc.Add(client.Message{Role: "user", Content: content})
+	sc.Add(client.Message{Role: "user", Text: content})
 
 	resp, err := ai.Chat(client.ChatRequest{
 		Messages: append(append([]client.Message{}, sysMsg), sc.Messages()...),
@@ -98,11 +98,11 @@ func Completion(id int64, cache *ChatCache, ai *client.Client, content string) (
 		return "", err
 	}
 
-	resp.Message.Content = ParseThink(resp.Message.Content)
+	resp.Message.Text = ParseThink(resp.Message.Text)
 
 	sc.Add(resp.Message)
 	sc.Save()
-	return resp.Message.Content, nil
+	return resp.Message.Text, nil
 }
 
 func ParseThink(msg string) string {

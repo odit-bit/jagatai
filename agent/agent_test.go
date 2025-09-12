@@ -27,8 +27,7 @@ func (mp *mockProvider) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 		},
 	}
 	if len(req.Tools) > 0 {
-
-		if strings.Contains(query.Content, "time") {
+		if strings.Contains(query.Text, "time") {
 			tools := req.Tools
 			res.Choices[0].Message = agent.Message{
 				Toolcalls: []agent.ToolCall{
@@ -51,24 +50,10 @@ func newMockProviderFunc(key string) (agent.Provider, error) {
 var req = agent.CCReq{
 	Messages: []agent.Message{
 		{
-			Role:    "user",
-			Content: "test-1",
+			Role: "user",
+			Text: "test1",
 		},
 	},
-}
-
-func Test_agent_New(t *testing.T) {
-	mp := mockProvider{}
-	a := agent.New("test", &mp, agent.WithMaxToolCall(3))
-
-	res, err := a.Completions(t.Context(), &req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = res
-	if res.Choices[0].Message.Content != req.Messages[0].Content {
-		t.Fatalf("got result %s, expected %s", res.Choices[0].Message.Content, req.Messages[0].Content)
-	}
 }
 
 func Test_agent_NewWithProvider(t *testing.T) {
@@ -81,16 +66,15 @@ func Test_agent_NewWithProvider(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = res
-	if res.Choices[0].Message.Content != req.Messages[0].Content {
-		t.Fatalf("got result %s, expected %s", res.Choices[0].Message.Content, req.Messages[0].Content)
+	if res.Choices[0].Message.Text != req.Messages[0].Text {
+		t.Fatalf("got result %s, expected %s", res.Choices[0].Message.Text, req.Messages[0].Text)
 	}
 }
 
 var req_tool = agent.CCReq{
 	Messages: []agent.Message{
 		{
-			Role:    "user",
-			Content: "current time",
+			Text: "current time",
 		},
 	},
 }

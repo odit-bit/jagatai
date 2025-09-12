@@ -49,10 +49,12 @@ func (oapi *OllamaAPI) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes,
 
 	msgs := []ollama.Message{}
 	for _, msg := range req.Messages {
-		msgs = append(msgs, ollama.Message{
+		oMsg := ollama.Message{
 			Role:    msg.Role,
-			Content: msg.Content,
-		})
+			Content: msg.Text,
+		}
+
+		msgs = append(msgs, oMsg)
 	}
 
 	// implement tools
@@ -94,7 +96,7 @@ func (oapi *OllamaAPI) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes,
 					FinishReason: cr.DoneReason,
 					Message: agent.Message{
 						Role:      cr.Message.Role,
-						Content:   cr.Message.Content,
+						Text:      cr.Message.Content,
 						Toolcalls: tcs,
 					}},
 			},

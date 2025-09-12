@@ -55,48 +55,55 @@ func (osm *OsmTool) Tooling() agent.Tool {
 	return t
 }
 
-func (osm *OsmTool) callback(ctx context.Context, fc agent.FunctionCall) (string, error) {
+func (osm *OsmTool) callback(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
+	toolresponse := agent.ToolResponse{
+		Output: map[string]any{},
+	}
+
 	if fc.Name != "open_street_map" {
-		return "wrong function name, expected osm", nil
+		toolresponse.Output["error"] = "wrong function name, expected osm"
+		return &toolresponse, nil
 	}
 
 	param := map[string]string{}
 	if err := json.Unmarshal([]byte(fc.Arguments), &param); err != nil {
-		return "wrong format arguemnts, expected {address : location_name}", nil
+		toolresponse.Output["error"] = "wrong format arguemnts, expected {address : location_name}"
+		return &toolresponse, nil
 	}
+
 	arg, ok := param["address"]
 	if !ok {
-		return "wrong format argument, address cannot be empty", nil
+		toolresponse.Output["error"] = "wrong format argument, address cannot be empty"
+		return &toolresponse, nil
 	}
 
 	apiURL := "https://nominatim.openstreetmap.org/search?q=" + url.QueryEscape(arg) + "&format=json"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header.Set("User-Agent", "Go Geocoding")
 	resp, err := osm.cli.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("osm failed to execute request: %v", err)
+		return nil, fmt.Errorf("osm failed to execute request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	var result []GeoCodeResult
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("osm failed marshal the response:%v", err)
+		return nil, fmt.Errorf("osm failed marshal the response:%v", err)
 	}
 
 	if len(result) > 0 {
 		// Get first result
 		firstResult := result[0]
-		return fmt.Sprintf(
-			"Latitude: %v Longitude: %v",
-			firstResult.Lat,
-			firstResult.Lon,
-		), nil
+		toolresponse.Output["latitude"] = firstResult.Lat
+		toolresponse.Output["longitude"] = firstResult.Lon
+		return &toolresponse, nil
 	}
 
-	return fmt.Sprintf("no result found for the %s", fc.Arguments), nil
+	toolresponse.Output["error"] = fmt.Sprintf("no result found for the %s", fc.Arguments)
+	return &toolresponse, nil
 
 }
 

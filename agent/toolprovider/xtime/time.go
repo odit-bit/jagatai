@@ -39,8 +39,12 @@ func (o *clock) Tooling() agent.Tool {
 		},
 	}
 
-	t.SetCallback(func(ctx context.Context, fn agent.FunctionCall) (string, error) {
-		return time.Now().UTC().String(), nil
+	t.SetCallback(func(ctx context.Context, fn agent.FunctionCall) (*agent.ToolResponse, error) {
+		return &agent.ToolResponse{
+			Output: map[string]any{
+				"current_time_utc": time.Now().UTC().String(),
+			},
+		}, nil
 	})
 
 	return t
