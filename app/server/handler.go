@@ -59,7 +59,7 @@ func HandleAgent(ctx context.Context, a Agent, e *echo.Echo) {
 
 		cr := ChatResponse{
 			DoneReason: output.Choices[0].FinishReason,
-			CreatedAt:  output.Created.Time(),
+			CreatedAt:  output.Created,
 			Message:    output.Choices[0].Message,
 		}
 		slog.Debug("request finish")
