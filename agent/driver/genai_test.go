@@ -9,7 +9,7 @@ import (
 	"github.com/odit-bit/jagatai/agent/toolprovider/xtime"
 )
 
-func TestXxx(t *testing.T) {
+func Test_genai(t *testing.T) {
 	tool := xtime.NewTooldef(tooldef.Config{}).Tooling()
 
 	fd := driver.ToFunctionDeclaration(&tool)

@@ -57,10 +57,10 @@ func Build(ctx context.Context, cfgs []Config) ([]agent.Tool, error) {
 				return nil, fmt.Errorf("tools build: %s", err)
 			} else if !ok {
 				slog.Warn(
-					fmt.Sprintf("tool build called but not available, maybe forget to register? Name: %s, Endpoint: %s",
+					fmt.Sprintf("skip build tool that not respond ping, Name: %s, Endpoint: %s",
 						item.config.Name, item.config.Endpoint,
 					))
-				continue //skip add the tool if ping fails
+				continue //skip add the tool
 			}
 		}
 

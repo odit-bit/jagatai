@@ -3,5 +3,6 @@ package toolprovider
 
 import (
 	_ "github.com/odit-bit/jagatai/agent/toolprovider/openmeteo"
+	_ "github.com/odit-bit/jagatai/agent/toolprovider/openstreetmap"
 	_ "github.com/odit-bit/jagatai/agent/toolprovider/xtime"
 )

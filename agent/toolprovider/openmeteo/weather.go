@@ -123,8 +123,8 @@ func (wt *WeatherTool) GetCurrentWeather(ctx context.Context, lat, long float64)
 
 func (wt *WeatherTool) Callback(ctx context.Context, fc agent.FunctionCall) (string, error) {
 	param := struct {
-		Latitude  float64
-		Longitude float64
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
 	}{}
 	if err := json.Unmarshal([]byte(fc.Arguments), &param); err != nil {
 		return "", err
@@ -145,15 +145,15 @@ func (wt *WeatherTool) Tooling() agent.Tool {
 		Type: "function",
 		Function: agent.Function{
 			Name:        "get_current_weather",
-			Description: "get current temperature for provided coordinates in celsius.",
+			Description: "get current temperature (celcius) for provided coordinates. example {latitude: :-6.9218457, longitude:107.6070833}",
 			Parameters: agent.ParameterSchema{
 				Type: agent.Parameter_Type_Object,
 				Properties: map[string]agent.ParameterDefinition{
 					"latitude": {
-						Type: "NUMBER",
+						Type: "float",
 					},
 					"longitude": {
-						Type: "NUMBER",
+						Type: "float",
 					},
 				},
 				Required: []string{"latitude", "longitude"},

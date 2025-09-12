@@ -88,7 +88,7 @@ func (oapi *OllamaAPI) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes,
 
 		resp = &agent.CCRes{
 			Model:   cr.Model,
-			Created: agent.Timestamp(cr.CreatedAt.Unix()),
+			Created: cr.CreatedAt,
 			Choices: []agent.Choice{
 				{
 					FinishReason: cr.DoneReason,

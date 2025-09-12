@@ -70,16 +70,15 @@ func (agent *Agent) Completions(ctx context.Context, req *CCReq) (*CCRes, error)
 	// TOOL CALL
 	for i := 0; i < agent.toolMaxCall && resp.IsToolCall(); i++ {
 		for _, tc := range resp.Choices[0].Message.Toolcalls {
-			slog.Debug("tool call")
 			toolResp, err := agent.tp.Invoke(ctx, tc)
 			if err != nil {
 				toolResp = fmt.Sprintf("error: %s function failed to invoke", tc.Function.Name)
-			} else {
-				slog.Debug("agent_tool_call", "funtion", tc.Function, "result", toolResp)
 			}
+			slog.Debug("agent_tool_call", "function", tc.Function, "error", err)
+
 			req.Messages = append(req.Messages, resp.Choices[0].Message, Message{
 				Role:       "tool",
-				Content:    fmt.Sprintf("result of function call %v is %v", tc.Function.Name, toolResp),
+				Content:    toolResp,
 				ToolCallID: tc.ID,
 				Toolcalls:  []ToolCall{tc},
 			})

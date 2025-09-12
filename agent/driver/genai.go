@@ -124,6 +124,8 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 
 	// respons message
 	a := &agent.CCRes{
+		ID:    resp.ResponseID,
+		Model: resp.ModelVersion,
 		Choices: []agent.Choice{
 			{
 				Message: agent.Message{
@@ -133,6 +135,7 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 				},
 			},
 		},
+		Created: resp.CreateTime,
 	}
 
 	// jsonResult, _ := json.MarshalIndent(a, "", "  ")
@@ -148,7 +151,7 @@ func ToFunctionDeclaration(t *agent.Tool) *genai.FunctionDeclaration {
 		return nil
 	}
 
-	// Helper function to map your type strings to the API's required types.
+	// Helper function to map type strings to the API's required types.
 	mapType := func(inputType string) genai.Type {
 		switch strings.ToLower(inputType) {
 		case "string":
@@ -176,10 +179,10 @@ func ToFunctionDeclaration(t *agent.Tool) *genai.FunctionDeclaration {
 		Required:   t.Function.Parameters.Required,
 	}
 
-	// Iterate over the properties and convert each one, using our new mapping logic.
+	// Iterate over the properties and convert each one, using mapping logic.
 	for name, propDef := range t.Function.Parameters.Properties {
 		paramSchema.Properties[name] = &genai.Schema{
-			Type:        mapType(propDef.Type), // <-- The fix is applied here!
+			Type:        mapType(propDef.Type),
 			Description: propDef.Description,
 			Enum:        propDef.Enum,
 		}

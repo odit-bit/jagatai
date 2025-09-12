@@ -26,7 +26,7 @@ type CCRes struct {
 	ID      string    `json:"id"`
 	Model   string    `json:"model"`
 	Object  string    `json:"object"`
-	Created Timestamp `json:"created"`
+	Created time.Time `json:"created"`
 	Choices []Choice  `json:"choices"`
 	Usage   usage     `json:"usage"`
 }

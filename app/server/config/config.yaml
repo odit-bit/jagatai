@@ -14,3 +14,4 @@ tools:
   - name: "clock"
     endpoint: ""
     api_key: ""
+  - name: "osm"
