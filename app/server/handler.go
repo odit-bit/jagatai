@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/odit-bit/jagatai/agent"
-	"github.com/odit-bit/jagatai/agent/driver"
 )
 
 type ChatResponse struct {
@@ -26,7 +25,11 @@ type ChatRequest struct {
 	Think    bool
 }
 
-func HandleAgent(ctx context.Context, a *agent.Agent, e *echo.Echo) {
+type Agent interface {
+	Completions(ctx context.Context, req *agent.CCReq) (*agent.CCRes, error)
+}
+
+func HandleAgent(ctx context.Context, a Agent, e *echo.Echo) {
 	if e == nil {
 		panic("got nil parameter")
 	}
@@ -43,7 +46,7 @@ func HandleAgent(ctx context.Context, a *agent.Agent, e *echo.Echo) {
 			return c.JSON(400, echo.Map{"error": "bad json format"})
 		}
 
-		output, err := a.Completions(c.Request().Context(), agent.CCReq{
+		output, err := a.Completions(c.Request().Context(), &agent.CCReq{
 			Messages: input.Messages,
 			Think:    input.Think,
 			Stream:   false,
@@ -63,29 +66,6 @@ func HandleAgent(ctx context.Context, a *agent.Agent, e *echo.Echo) {
 		return c.JSON(200, cr)
 	})
 
-	// e.POST("/v1/models/:model", func(c echo.Context) error {
-	// 	model := c.Param("model")
-	// 	if model == "" {
-	// 		return c.String(400, "model cannot be empty")
-	// 	}
-	// 	a.SetModel(model)
-	// 	return c.JSON(200, "success")
-	// })
-}
-
-func HandleAPI(ctx context.Context, llm *driver.Default, e *echo.Echo) {
-	if e == nil {
-		panic("got nil parameter")
-	}
-	e.GET("/v1/models", func(c echo.Context) error {
-		m, err := llm.Models(c.Request().Context())
-		if err != nil {
-			slog.Error("models", "error", err)
-			return c.String(500, "internal error")
-		}
-
-		return c.JSON(200, m)
-	})
 }
 
 func IsJsonContentType(req *http.Request) bool {

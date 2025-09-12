@@ -7,7 +7,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/odit-bit/jagatai/agent"
-	"github.com/odit-bit/jagatai/agent/driver"
+	_ "github.com/odit-bit/jagatai/agent/driver"
+	"github.com/odit-bit/jagatai/agent/middleware"
 	"github.com/odit-bit/jagatai/agent/tooldef"
 	_ "github.com/odit-bit/jagatai/agent/toolprovider"
 	"github.com/odit-bit/jagatai/app/server/config"
@@ -20,10 +21,10 @@ func init() {
 	ServerCMD.Flags().Bool(config.Flag_srv_debug, false, "debug log")
 	ServerCMD.Flags().String(config.Flag_srv_configfile, "", "path to config file")
 
-	ServerCMD.Flags().String(config.Flag_llm_key, "", "llm api key")
-	ServerCMD.Flags().String(config.Flag_llm_address, "", "llm api address")
-
-	ServerCMD.Flags().String(config.Flag_agent_model, "", "base model agent use")
+	ServerCMD.Flags().String(config.Flag_llm_key, "", "provider's api key")
+	// ServerCMD.Flags().String(config.Flag_llm_address, "", "provider's domain")
+	ServerCMD.Flags().String(config.Flag_llm_name, "", "provider's name")
+	ServerCMD.Flags().String(config.Flag_llm_model, "", "base model agent use")
 
 }
 
@@ -80,17 +81,30 @@ var ServerCMD = cobra.Command{
 		}
 		toolOpt := agent.WithTool(t...)
 
-		// llm
-		provider := driver.NewDefault(cfg.Provider.Endpoint, cfg.Provider.ApiKey)
-
+		if err != nil {
+			slog.Error("jagatAI init provider", "error", err.Error())
+			return err
+		}
 		// agent
-		a := agent.New(cfg.Agent.Model, provider, toolOpt)
+		// a := agent.New(cfg.Agent.Model, provider, toolOpt)
+		a, err := agent.NewPipe(
+			cfg.Provider.Model,
+			cfg.Provider.Name,
+			cfg.Provider.ApiKey,
+			toolOpt,
+		)
+		if err != nil {
+			slog.Error("jagatAI init Agent", "error", err.Error())
+			return err
+		}
+		// middleware
+		m, _ := middleware.Build("mock", middleware.Config{})
+		a.AddMiddleware(m)
 
 		// http server
 		e := echo.New()
 		e.Debug = cfg.Server.Debug
 		e.GET("/metric", echo.WrapHandler(promhttp.Handler()))
-		HandleAPI(ctx, provider, e)
 		HandleAgent(ctx, a, e)
 
 		srvErr := make(chan error, 1)

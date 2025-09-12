@@ -10,6 +10,33 @@ import (
 	ollama "github.com/ollama/ollama/api"
 )
 
+//OpenAI compatible
+
+const (
+	_ollama_domain          = "http://127.0.0.1:11434"
+	_ollama_completion_path = "v1/chat/completions"
+)
+
+func init() {
+	agent.RegisterDriver("ollama", NewOllamaAdapter)
+}
+
+// init simple OpenAI compatible api
+func NewOllamaAdapter(key string) (agent.Provider, error) {
+	e := endpoints{}
+	e.Set(completionPath, _ollama_domain, _ollama_completion_path)
+
+	return &Default{
+		hc: http.DefaultClient,
+		// domain:    _ollama_domain,
+		apiKey:    key,
+		maxRetry:  _http_default_max_retry,
+		endpoints: e,
+	}, nil
+}
+
+//-----------------------------------------------
+
 var _ agent.Provider = (*OllamaAPI)(nil)
 
 type OllamaAPI struct {

@@ -32,28 +32,43 @@ func Count() int {
 }
 
 func Build(ctx context.Context, cfgs []Config) ([]agent.Tool, error) {
-	dmutex.Lock()
-	defer dmutex.Unlock()
+	//temporary list provider
+	type providerToBuild struct {
+		provider Provider
+		config   Config
+	}
+	toBuild := []providerToBuild{}
 
-	t := []agent.Tool{}
+	// --- Critical Section Start ---
+	dmutex.RLock() // Use a Read Lock since we are only reading the map.
 	for _, cfg := range cfgs {
-		fn, ok := providers[cfg.Name]
-		if ok {
+		if fn, ok := providers[cfg.Name]; ok {
 			p := fn(cfg)
-			if !cfg.DisablePing {
-				if ok, err := p.Ping(ctx); err != nil {
-					return nil, fmt.Errorf("tools build: %s", err)
-				} else if !ok {
-					slog.Warn(fmt.Sprintf("tool build called but not available, maybe forget to register? Name: %s, Endpoint: %s", cfg.Name, cfg.Endpoint))
-					continue //skip add the tool if ping fails
-				}
-			}
-
-			//add tool
-			t = append(t, p.Tooling())
-			slog.Debug("tool initate", "name", cfg.Name, "address", cfg.Endpoint)
+			toBuild = append(toBuild, providerToBuild{provider: p, config: cfg})
 		}
 	}
+	dmutex.RUnlock()
+	// --- Critical Section End --- Lock is now released.
+
+	t := []agent.Tool{}
+	for _, item := range toBuild {
+		if !item.config.DisablePing {
+			if ok, err := item.provider.Ping(ctx); err != nil {
+				return nil, fmt.Errorf("tools build: %s", err)
+			} else if !ok {
+				slog.Warn(
+					fmt.Sprintf("tool build called but not available, maybe forget to register? Name: %s, Endpoint: %s",
+						item.config.Name, item.config.Endpoint,
+					))
+				continue //skip add the tool if ping fails
+			}
+		}
+
+		//add tool
+		t = append(t, item.provider.Tooling())
+		slog.Debug("tool initate", "name", item.config.Name, "address", item.config.Endpoint)
+	}
+
 	if len(t) == 0 {
 		slog.Warn("there is 0 tools provider registered, forget to blank import ? (toolprovider)")
 	}

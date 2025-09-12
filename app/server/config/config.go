@@ -12,14 +12,14 @@ import (
 )
 
 const (
-	Flag_llm_key     = "llm_key"
-	Flag_llm_address = "llm_addr"
+	Flag_llm_key = "p_key"
+	// Flag_llm_address = "p_addr"
+	Flag_llm_name  = "p_name"
+	Flag_llm_model = "p_model"
 
 	Flag_srv_addr       = "addr"
 	Flag_srv_debug      = "debug"
 	Flag_srv_configfile = "config"
-
-	Flag_agent_model = "model"
 )
 
 //go:embed config.yaml
@@ -41,12 +41,14 @@ type ServerConfig struct {
 }
 
 type Provider struct {
+	Name     string `yaml:"name"`
+	Model    string `yaml:"model"`
 	ApiKey   string `yaml:"api_key"`
 	Endpoint string `yaml:"endpoint"`
 }
 
 type AgentConfig struct {
-	Model string `yaml:"model"`
+	// Model string `yaml:"model"`
 }
 
 func UnmarshalConfigFile(filename string, cfg *Config) error {
@@ -79,6 +81,9 @@ func BindConfigEnv(cfg *Config) error {
 	if s, ok := os.LookupEnv("JAGATAI_PROVIDER_APIKEY"); ok {
 		cfg.Provider.ApiKey = s
 	}
+	if s, ok := os.LookupEnv("JAGATAI_PROVIDER_NAME"); ok {
+		cfg.Provider.Name = s
+	}
 
 	return nil
 }
@@ -95,11 +100,25 @@ func BindCobraFlags(cfg *Config, flags *pflag.FlagSet) error {
 		cfg.Provider.ApiKey = llmKey
 	}
 
-	llmAddr, err := flags.GetString(Flag_llm_address)
+	// llmAddr, err := flags.GetString(Flag_llm_address)
+	// if err != nil {
+	// 	mergedErr = errors.Join(mergedErr, err)
+	// } else if llmAddr != "" {
+	// 	cfg.Provider.Endpoint = llmAddr
+	// }
+
+	llmName, err := flags.GetString(Flag_llm_name)
 	if err != nil {
 		mergedErr = errors.Join(mergedErr, err)
-	} else if llmAddr != "" {
-		cfg.Provider.Endpoint = llmAddr
+	} else if llmName != "" {
+		cfg.Provider.Name = llmName
+	}
+
+	llmModel, err := flags.GetString(Flag_llm_model)
+	if err != nil {
+		mergedErr = errors.Join(mergedErr, err)
+	} else if llmModel != "" {
+		cfg.Provider.Model = llmModel
 	}
 
 	//server
@@ -115,14 +134,6 @@ func BindCobraFlags(cfg *Config, flags *pflag.FlagSet) error {
 		mergedErr = errors.Join(mergedErr, err)
 	} else if srvDebug {
 		cfg.Server.Debug = srvDebug
-	}
-
-	// agent
-	model, err := flags.GetString(Flag_agent_model)
-	if err != nil {
-		mergedErr = errors.Join(mergedErr, err)
-	} else if model != "" {
-		cfg.Agent.Model = model
 	}
 
 	return mergedErr

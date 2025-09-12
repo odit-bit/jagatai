@@ -150,10 +150,10 @@ func (wt *WeatherTool) Tooling() agent.Tool {
 				Type: agent.Parameter_Type_Object,
 				Properties: map[string]agent.ParameterDefinition{
 					"latitude": {
-						Type: "float",
+						Type: "NUMBER",
 					},
 					"longitude": {
-						Type: "float",
+						Type: "NUMBER",
 					},
 				},
 				Required: []string{"latitude", "longitude"},

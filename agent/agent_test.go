@@ -11,6 +11,10 @@ import (
 	"github.com/odit-bit/jagatai/agent/toolprovider/xtime"
 )
 
+func init() {
+	agent.RegisterDriver("mp", newMockProviderFunc)
+}
+
 var _ agent.Provider = (*mockProvider)(nil)
 
 type mockProvider struct{}
@@ -38,7 +42,10 @@ func (mp *mockProvider) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 	}
 
 	return res, nil
+}
 
+func newMockProviderFunc(key string) (agent.Provider, error) {
+	return &mockProvider{}, nil
 }
 
 var req = agent.CCReq{
@@ -50,11 +57,26 @@ var req = agent.CCReq{
 	},
 }
 
-func Test_agent(t *testing.T) {
+func Test_agent_New(t *testing.T) {
 	mp := mockProvider{}
 	a := agent.New("test", &mp, agent.WithMaxToolCall(3))
 
-	res, err := a.Completions(t.Context(), req)
+	res, err := a.Completions(t.Context(), &req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = res
+	if res.Choices[0].Message.Content != req.Messages[0].Content {
+		t.Fatalf("got result %s, expected %s", res.Choices[0].Message.Content, req.Messages[0].Content)
+	}
+}
+
+func Test_agent_NewWithProvider(t *testing.T) {
+	// mp := mockProvider{}
+
+	a, _ := agent.NewWithProvider("test", "mp", "", agent.WithMaxToolCall(3))
+
+	res, err := a.Completions(t.Context(), &req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,18 +95,19 @@ var req_tool = agent.CCReq{
 	},
 }
 
-func Test_agent_tools(t *testing.T) {
+func Test_agent_pipe(t *testing.T) {
 	tp, err := tooldef.Build(t.Context(), []tooldef.Config{{Name: xtime.Namespace}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = tp
-	a := agent.New("test", &mockProvider{}, agent.WithTool(tp...))
-
-	res, err := a.Completions(t.Context(), req_tool)
+	a, _ := agent.NewPipe("test", "mp", "", agent.WithMaxToolCall(3), agent.WithTool(tp...))
+	a.AddMiddleware(func(ctx context.Context, req *agent.CCReq, next agent.NextFunc) (*agent.CCRes, error) {
+		// req.Messages = append(req.Messages, agent.Message{Role: "string", Content: "add by middleware"})
+		return next(ctx, req)
+	})
+	res, err := a.Completions(t.Context(), &req_tool)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_ = res
-
 }

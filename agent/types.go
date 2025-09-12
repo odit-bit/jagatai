@@ -1,23 +1,22 @@
 package agent
 
 import (
-	"context"
 	"time"
 )
 
 type Message struct {
 	Role       string     `json:"role"`
 	Content    string     `json:"content"`
-	ToolCallID string     `json:"tool_call_id"`
-	Toolcalls  []ToolCall `json:"tool_calls"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
+	Toolcalls  []ToolCall `json:"tool_calls,omitempty"`
 }
 
 // ChatCompletionRequest
 type CCReq struct {
 	Model      string    `json:"model"`
 	Messages   []Message `json:"messages"`
-	Stream     bool      `json:"stream"`
-	Think      bool      `json:"think"`
+	Stream     bool      `json:"stream,omitempty"`
+	Think      bool      `json:"think,omitempty"`
 	Tools      []Tool    `json:"tools"`
 	ToolChoice string    `json:"tool_choice"`
 }
@@ -73,15 +72,4 @@ func (tm *Timestamp) String() string {
 
 func (tm *Timestamp) Time() time.Time {
 	return time.Unix(int64(*tm), 0)
-}
-
-// Remote backend for model
-type Provider interface {
-	// Chat(ctx context.Context, req CCReq, fn func(res CCRes) error) error
-	Chat(ctx context.Context, req CCReq) (*CCRes, error)
-}
-
-type ToolProviders interface {
-	Invoke(ctx context.Context, tc ToolCall) (string, error)
-	ToSlice() []Tool
 }

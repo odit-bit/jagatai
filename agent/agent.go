@@ -57,12 +57,12 @@ type CompletionInput struct {
 	Content string
 }
 
-func (agent *Agent) Completions(ctx context.Context, req CCReq) (*CCRes, error) {
+func (agent *Agent) Completions(ctx context.Context, req *CCReq) (*CCRes, error) {
 	req.Model = agent.model
 	req.Tools = agent.tp.ToSlice()
 	req.ToolChoice = "auto"
 
-	resp, err := agent.provider.Chat(ctx, req)
+	resp, err := agent.provider.Chat(ctx, *req)
 	if err != nil {
 		return nil, fmt.Errorf("agent provider: %v", err)
 	}
@@ -73,21 +73,21 @@ func (agent *Agent) Completions(ctx context.Context, req CCReq) (*CCRes, error) 
 			slog.Debug("tool call")
 			toolResp, err := agent.tp.Invoke(ctx, tc)
 			if err != nil {
-				return nil, err
-				// toolResp = fmt.Sprintf("error: %s function failed to invoke", tc.Function.Name)
+				toolResp = fmt.Sprintf("error: %s function failed to invoke", tc.Function.Name)
 			} else {
-				slog.Debug("tool function", "funtion", tc.Function, "resp", toolResp)
+				slog.Debug("agent_tool_call", "funtion", tc.Function, "result", toolResp)
 			}
 			req.Messages = append(req.Messages, resp.Choices[0].Message, Message{
 				Role:       "tool",
-				Content:    toolResp,
+				Content:    fmt.Sprintf("result of function call %v is %v", tc.Function.Name, toolResp),
 				ToolCallID: tc.ID,
+				Toolcalls:  []ToolCall{tc},
 			})
 
 		}
 
 		// call the provider with tools response
-		resp, err = agent.provider.Chat(ctx, req)
+		resp, err = agent.provider.Chat(ctx, *req)
 		if err != nil {
 			return nil, fmt.Errorf("agent provider (turn %d): %v", i+1, err)
 		}

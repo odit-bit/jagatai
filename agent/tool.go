@@ -58,6 +58,11 @@ type FunctionCall struct {
 	Arguments string `json:"arguments"`
 }
 
+type ToolProviders interface {
+	Invoke(ctx context.Context, tc ToolCall) (string, error)
+	ToSlice() []Tool
+}
+
 ///
 
 type ToolsMap map[string]Tool

@@ -2,7 +2,6 @@
 package toolprovider
 
 import (
-	_ "github.com/odit-bit/jagatai/agent/toolprovider/googlesearch"
 	_ "github.com/odit-bit/jagatai/agent/toolprovider/openmeteo"
 	_ "github.com/odit-bit/jagatai/agent/toolprovider/xtime"
 )
