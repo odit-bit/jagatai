@@ -70,3 +70,7 @@ func (sc *StoredChat) Messages() []client.Message {
 func (sc *StoredChat) Save() {
 	sc.store[sc.id] = sc
 }
+
+func (sc *StoredChat) Len() int {
+	return len(sc.store)
+}

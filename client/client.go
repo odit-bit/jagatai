@@ -38,7 +38,7 @@ func NewClient(endpoint, key string) *Client {
 	}
 }
 
-func (c *Client) Chat(in ChatRequest) (*ChatResponse, error) {
+func (c *Client) Chat(ctx context.Context, in ChatRequest) (*ChatResponse, error) {
 	const path = "v1/chat/completions"
 	urlString := fmt.Sprintf("%s/%s", c.Endpoint, path)
 
@@ -47,7 +47,7 @@ func (c *Client) Chat(in ChatRequest) (*ChatResponse, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, urlString, bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, urlString, bytes.NewReader(b))
 	if err != nil {
 		return nil, fmt.Errorf("client failed create request: %v", err)
 	}

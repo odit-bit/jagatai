@@ -7,11 +7,12 @@ provider: # OpenAI api compatible backend
   model: "qwen3:1.7b" #Default
   api_key: ""
 
-tools:
-  - name: "openmeteo"
-    endpoint: "https://api.open-meteo.com"
-    api_key: ""
-  - name: "clock"
-    endpoint: ""
-    api_key: ""
-  - name: "osm"
+#
+# tools:
+#   - name: "openmeteo"
+#     endpoint: "https://api.open-meteo.com"
+#     api_key: ""
+#   - name: "clock"
+#     endpoint: ""
+#     api_key: ""
+#   - name: "osm"

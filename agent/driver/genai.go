@@ -24,6 +24,9 @@ func NewGeminiAdapter(key string) (agent.Provider, error) {
 	cli, err := genai.NewClient(context.Background(), &genai.ClientConfig{
 		APIKey:  key,
 		Backend: genai.BackendGeminiAPI,
+		HTTPOptions: genai.HTTPOptions{
+			ExtraBody: map[string]any{},
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed start gemini_adapter: %s", err)
@@ -84,6 +87,12 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 	resp, err := g.cli.Models.GenerateContent(ctx, req.Model, content, &genai.GenerateContentConfig{
 		Tools:             tools,
 		SystemInstruction: &sys,
+		SafetySettings:    safetySetting,
+		ResponseModalities: []string{
+			// string(genai.ModalityAudio),
+			// string(genai.ModalityImage),
+			string(genai.ModalityText),
+		},
 	})
 
 	if err != nil {
@@ -93,7 +102,6 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 	//conversion back the message and the tools
 	//toolcall
 	toolCall := []agent.ToolCall{}
-	text := ""
 	if resp.FunctionCalls() != nil {
 		for _, v := range resp.FunctionCalls() {
 			tc, err := toToolCall(v)
@@ -102,8 +110,18 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 			}
 			toolCall = append(toolCall, *tc)
 		}
-	} else {
-		text = resp.Text()
+	}
+
+	data := agent.Blob{
+		Bytes: []byte{},
+	}
+	for _, v := range resp.Candidates[0].Content.Parts {
+		if v.InlineData != nil {
+			if v.InlineData.Data != nil {
+				data.Bytes = v.InlineData.Data
+				data.Mime = v.InlineData.MIMEType
+			}
+		}
 	}
 
 	// respons message
@@ -114,8 +132,9 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 			{
 				Message: agent.Message{
 					Role:      "assistant",
-					Text:      text,
+					Text:      resp.Text(),
 					Toolcalls: toolCall,
+					Data:      &data,
 				},
 			},
 		},
@@ -258,10 +277,10 @@ func convertUser(msg *agent.Message) (*genai.Content, error) {
 		Parts = append(Parts, genai.NewPartFromText(msg.Text))
 	}
 
-	if msg.Image != nil {
+	if msg.Data != nil {
 		Parts = append(Parts, genai.NewPartFromBytes(
-			msg.Image.Bytes,
-			msg.Image.Mime,
+			msg.Data.Bytes,
+			msg.Data.Mime,
 		))
 	}
 
@@ -279,4 +298,23 @@ func convertUser(msg *agent.Message) (*genai.Content, error) {
 		Parts: Parts,
 	}
 	return content, nil
+}
+
+var safetySetting = []*genai.SafetySetting{
+	{
+		Category:  genai.HarmCategoryDangerousContent,
+		Threshold: genai.HarmBlockThresholdBlockNone,
+	},
+	{
+		Category:  genai.HarmCategoryHarassment,
+		Threshold: genai.HarmBlockThresholdBlockNone,
+	},
+	{
+		Category:  genai.HarmCategoryHateSpeech,
+		Threshold: genai.HarmBlockThresholdBlockNone,
+	},
+	{
+		Category:  genai.HarmCategorySexuallyExplicit,
+		Threshold: genai.HarmBlockThresholdBlockNone,
+	},
 }

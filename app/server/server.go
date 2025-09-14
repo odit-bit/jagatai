@@ -22,7 +22,6 @@ func init() {
 	ServerCMD.Flags().String(config.Flag_srv_configfile, "", "path to config file")
 
 	ServerCMD.Flags().String(config.Flag_llm_key, "", "provider's api key")
-	// ServerCMD.Flags().String(config.Flag_llm_address, "", "provider's domain")
 	ServerCMD.Flags().String(config.Flag_llm_name, "", "provider's name")
 	ServerCMD.Flags().String(config.Flag_llm_model, "", "base model agent use")
 

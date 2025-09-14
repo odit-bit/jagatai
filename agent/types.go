@@ -7,13 +7,13 @@ import (
 type Message struct {
 	Role         string `json:"role"`
 	Text         string
-	Image        *ImageData
+	Data         *Blob
 	ToolCallID   string     `json:"tool_call_id,omitempty"`
 	Toolcalls    []ToolCall `json:"tool_calls,omitempty"`
 	ToolResponse *ToolResponse
 }
 
-type ImageData struct {
+type Blob struct {
 	//raw bytes
 	Bytes []byte
 	//IANA standart type

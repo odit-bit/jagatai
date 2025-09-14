@@ -53,7 +53,7 @@ func Test_message_convertUser(t *testing.T) {
 
 	act := &agent.Message{
 		Text: "message text",
-		Image: &agent.ImageData{
+		Data: &agent.Blob{
 			Bytes: []byte("this image place holder"),
 			Mime:  "image/jpeg",
 		},
@@ -81,8 +81,8 @@ func Test_message_convertUser(t *testing.T) {
 			assert.Equal(t, act.Text, text)
 		}
 		if image := part.InlineData; image != nil {
-			assert.Equal(t, act.Image.Bytes, image.Data)
-			assert.Equal(t, act.Image.Mime, image.MIMEType)
+			assert.Equal(t, act.Data.Bytes, image.Data)
+			assert.Equal(t, act.Data.Mime, image.MIMEType)
 		}
 	}
 }

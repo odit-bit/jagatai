@@ -21,14 +21,16 @@ var CompletionsCMD = cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		c := client.NewClient(GlobEndpoint, "")
-		res, err := c.Chat(client.ChatRequest{
-			Messages: []client.Message{
-				{
-					Role: "user",
-					Text: args[0],
+		res, err := c.Chat(
+			cmd.Context(),
+			client.ChatRequest{
+				Messages: []client.Message{
+					{
+						Role: "user",
+						Text: args[0],
+					},
 				},
-			},
-		})
+			})
 
 		if err != nil {
 			return err
