@@ -10,10 +10,6 @@ import (
 	"google.golang.org/genai"
 )
 
-func init() {
-	agent.RegisterDriver("genai", NewGeminiAdapter)
-}
-
 var _ agent.Provider = (*GeminiAdapter)(nil)
 
 type GeminiAdapter struct {

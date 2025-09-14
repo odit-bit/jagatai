@@ -17,10 +17,6 @@ const (
 	_ollama_completion_path = "v1/chat/completions"
 )
 
-func init() {
-	agent.RegisterDriver("ollama", NewOllamaAdapter)
-}
-
 // init simple OpenAI compatible api
 func NewOllamaAdapter(key string) (agent.Provider, error) {
 	e := endpoints{}

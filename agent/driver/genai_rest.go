@@ -14,10 +14,6 @@ const (
 	_genAI_completions_path = "v1beta/openai/chat/completions"
 )
 
-func init() {
-	agent.RegisterDriver("genai_rest", NewGenaiAdapter)
-}
-
 // init simple OpenAI compatible api
 func NewGenaiAdapter(key string) (agent.Provider, error) {
 	e := endpoints{}

@@ -17,10 +17,6 @@ import (
 	"github.com/odit-bit/jagatai/agent"
 )
 
-func init() {
-	agent.RegisterDriver("openai", NewOpenAIAdapter)
-}
-
 const (
 	_openai_domain           = "https://api.openai.com"
 	_openai_completions_path = "v1/chat/completions"

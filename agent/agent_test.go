@@ -14,10 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func init() {
-	agent.RegisterDriver("mp", newMockProviderFunc)
-}
-
 var _ agent.Provider = (*mockProvider)(nil)
 
 type mockProvider struct {
@@ -54,30 +50,6 @@ func newMockProviderFunc(key string) (agent.Provider, error) {
 	return &mockProvider{}, nil
 }
 
-var req = agent.CCReq{
-	Messages: []agent.Message{
-		{
-			Role: "user",
-			Text: "test1",
-		},
-	},
-}
-
-func Test_agent_NewWithProvider(t *testing.T) {
-	// mp := mockProvider{}
-
-	a, _ := agent.NewWithProvider("test", "mp", "", agent.WithMaxToolCall(3))
-
-	res, err := a.Completions(t.Context(), &req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = res
-	if res.Choices[0].Message.Text != req.Messages[0].Text {
-		t.Fatalf("got result %s, expected %s", res.Choices[0].Message.Text, req.Messages[0].Text)
-	}
-}
-
 var req_tool = agent.CCReq{
 	Messages: []agent.Message{
 		{
@@ -91,7 +63,9 @@ func Test_agent_pipe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, _ := agent.NewPipe("test", "mp", "", agent.WithMaxToolCall(3), agent.WithTool(tp...))
+
+	mp := mockProvider{}
+	a, _ := agent.NewPipe("test", &mp, agent.WithMaxToolCall(3), agent.WithTool(tp...))
 	a.AddMiddleware(func(ctx context.Context, req *agent.CCReq, next agent.NextFunc) (*agent.CCRes, error) {
 		// req.Messages = append(req.Messages, agent.Message{Role: "string", Content: "add by middleware"})
 		return next(ctx, req)
@@ -189,9 +163,11 @@ func TestAgent_Completions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			a, err := agent.NewWithProvider("test-model", "mp", "", agent.WithTool(tp...))
-			require.NoError(t, err)
-			a.SetProvider(tc.provider) // Helper function to set the provider for testing
+			// a, err := agent.NewWithProvider("test-model", "mp", "", agent.WithTool(tp...))
+			// require.NoError(t, err)
+			// a.SetProvider(tc.provider) // Helper function to set the provider for testing
+
+			a := agent.New("test-model", tc.provider, agent.WithTool(tp...))
 
 			res, err := a.Completions(context.Background(), &tc.req)
 

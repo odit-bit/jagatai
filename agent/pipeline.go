@@ -13,11 +13,8 @@ type completionsPipeline struct {
 	pipeline []MiddlewareFunc
 }
 
-func NewPipe(model string, driver string, key string, opts ...OptionFunc) (*completionsPipeline, error) {
-	a, err := NewWithProvider(model, driver, key, opts...)
-	if err != nil {
-		return nil, err
-	}
+func NewPipe(model string, provider Provider, opts ...OptionFunc) (*completionsPipeline, error) {
+	a := New(model, provider, opts...)
 
 	p := completionsPipeline{
 		agent:    a,
