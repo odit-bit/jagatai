@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"runtime"
@@ -25,6 +26,13 @@ type ChatRequest struct {
 	Think    bool
 }
 
+func (cr *ChatRequest) validate() error {
+	if len(cr.Messages) == 0 {
+		return fmt.Errorf("messages cannot be nil")
+	}
+	return nil
+}
+
 type Agent interface {
 	Completions(ctx context.Context, req *agent.CCReq) (*agent.CCRes, error)
 }
@@ -44,6 +52,10 @@ func HandleAgent(ctx context.Context, a Agent, e *echo.Echo) {
 		if err := c.Bind(&input); err != nil {
 			slog.Error("failed binding", "error", err, "type", input)
 			return c.JSON(400, echo.Map{"error": "bad json format"})
+		}
+		if err := input.validate(); err != nil {
+			slog.Error("validater error", "error", err)
+			return c.JSON(400, echo.Map{"error": "bad json format."})
 		}
 
 		output, err := a.Completions(c.Request().Context(), &agent.CCReq{

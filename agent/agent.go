@@ -134,3 +134,8 @@ func (agent *Agent) SetModel(model string) error {
 	agent.model = model
 	return nil
 }
+
+// Helper function to set provider on Agent for testing purposes.
+func (a *Agent) SetProvider(p Provider) {
+	a.provider = p
+}

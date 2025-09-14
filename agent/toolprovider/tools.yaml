@@ -1,0 +1,5 @@
+﻿# A list of tool provider packages to be automatically imported and registered.
+imports:
+  - "github.com/odit-bit/jagatai/agent/toolprovider/openmeteo"
+  - "github.com/odit-bit/jagatai/agent/toolprovider/openstreetmap"
+  - "github.com/odit-bit/jagatai/agent/toolprovider/xtime"
