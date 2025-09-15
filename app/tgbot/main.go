@@ -5,11 +5,9 @@ import (
 	"log"
 	"log/slog"
 
-	"github.com/odit-bit/jagatai/client"
+	"github.com/odit-bit/jagatai/api"
 	tele "gopkg.in/telebot.v4"
 )
-
-
 
 func main() {
 
@@ -32,7 +30,7 @@ func main() {
 	}
 
 	// ai backend
-	ai := client.NewClient(conf.LLM.Endpoint, conf.LLM.Key)
+	ai := api.NewClient(conf.LLM.Endpoint, conf.LLM.Key)
 
 	// cache
 	cache := NewCache()

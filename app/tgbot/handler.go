@@ -9,17 +9,17 @@ import (
 	"strings"
 
 	"github.com/odit-bit/jagatai/agent"
-	"github.com/odit-bit/jagatai/client"
+	"github.com/odit-bit/jagatai/api"
 	tele "gopkg.in/telebot.v4"
 )
 
 var sysPromp = "You are usefull assistant, ignore tools or functions for factual questions. Only use tools or function for relevant question. Don't mention if you use tool or not."
-var sysMsg = client.Message{
+var sysMsg = api.Message{
 	Role: "system",
 	Text: sysPromp,
 }
 
-func HandleBot(ctx context.Context, bot *tele.Bot, llmClient *client.Client, cache *ChatCache) {
+func HandleBot(ctx context.Context, bot *tele.Bot, llmClient *api.Client, cache *ChatCache) {
 	//bot
 	bot.Handle("/start", func(ctx tele.Context) error {
 		slog.Info("GOT Start")
@@ -54,7 +54,7 @@ func HandleBot(ctx context.Context, bot *tele.Bot, llmClient *client.Client, cac
 
 type Handler struct {
 	ctx   context.Context
-	ai    *client.Client
+	ai    *api.Client
 	cache *ChatCache
 }
 
@@ -79,7 +79,7 @@ func (h *Handler) HandleDoc(ctx tele.Context) error {
 	resp, err := h.do(
 		h.ctx,
 		ctx.Message().Chat.ID,
-		&client.Message{
+		&api.Message{
 			Role: "user",
 			Data: &agent.Blob{
 				Bytes: b,
@@ -99,7 +99,7 @@ func (h *Handler) HandleText(ctx tele.Context) error {
 
 	/*store chat ID*/
 
-	res, err := h.do(h.ctx, ctx.Chat().ID, &client.Message{
+	res, err := h.do(h.ctx, ctx.Chat().ID, &api.Message{
 		Role: "user",
 		Text: ctx.Text(),
 	})
@@ -112,7 +112,7 @@ func (h *Handler) HandleText(ctx tele.Context) error {
 func (h *Handler) HandleLoc(ctx tele.Context) error {
 	slog.Info("GOT Location")
 
-	res, err := h.do(h.ctx, ctx.Chat().ID, &client.Message{
+	res, err := h.do(h.ctx, ctx.Chat().ID, &api.Message{
 		Role: "user",
 		Text: fmt.Sprintf(
 			"Lat:%f, Long:%f",
@@ -147,7 +147,7 @@ func (h *Handler) HandlePhoto(ctx tele.Context) error {
 		}
 		mime := http.DetectContentType(b)
 
-		res, err := h.do(h.ctx, ctx.Chat().ID, &client.Message{
+		res, err := h.do(h.ctx, ctx.Chat().ID, &api.Message{
 			Role: "user",
 			Text: photo.InputMedia().Caption,
 			Data: &agent.Blob{
@@ -165,7 +165,7 @@ func (h *Handler) HandlePhoto(ctx tele.Context) error {
 	return ctx.Send("picture not from telegram server")
 }
 
-func (h *Handler) do(ctx context.Context, id int64, query *client.Message) (*client.ChatResponse, error) {
+func (h *Handler) do(ctx context.Context, id int64, query *api.Message) (*api.ChatResponse, error) {
 	sc := h.cache.Get(id)
 	if sc.Len() == 0 {
 		sc.Add(sysMsg)
@@ -173,7 +173,7 @@ func (h *Handler) do(ctx context.Context, id int64, query *client.Message) (*cli
 	sc.Add(*query)
 	resp, err := h.ai.Chat(
 		ctx,
-		client.ChatRequest{
+		api.ChatRequest{
 			Messages: sc.Messages(),
 		},
 	)

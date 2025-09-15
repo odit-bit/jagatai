@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/odit-bit/jagatai/client"
+	"github.com/odit-bit/jagatai/api"
 )
 
 type ChatCache struct {
@@ -52,18 +52,18 @@ func (cc *ChatCache) CountMessages(id int64) int {
 
 type StoredChat struct {
 	id       int64
-	messages []client.Message
+	messages []api.Message
 	updated  time.Time
 	store    map[int64]*StoredChat
 }
 
-func (sc *StoredChat) Add(msg client.Message) {
+func (sc *StoredChat) Add(msg api.Message) {
 	sc.messages = append(sc.messages, msg)
 	sc.updated = time.Now()
 }
 
 // Return slice of messages, it is save for modified
-func (sc *StoredChat) Messages() []client.Message {
+func (sc *StoredChat) Messages() []api.Message {
 	return sc.messages
 }
 
