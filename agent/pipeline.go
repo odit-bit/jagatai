@@ -34,7 +34,7 @@ func (cp *completionsPipeline) AddMiddleware(middleware ...MiddlewareFunc) {
 func (cp *completionsPipeline) Completions(ctx context.Context, in CCReq) (*CCRes, error) {
 
 	final := NextFunc(func(ctx context.Context, final *CCReq) (*CCRes, error) {
-		return cp.agent.Completions(ctx, *final)
+		return cp.agent.Completions(ctx, final.Messages)
 	})
 
 	chain := final

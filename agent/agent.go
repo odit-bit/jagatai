@@ -80,9 +80,9 @@ type CompletionOptions struct {
 	Stream bool
 }
 
-func (agent *Agent) Completions(ctx context.Context, in CCReq) (*CCRes, error) {
-	currentHistory := make([]Message, len(in.Messages))
-	copy(currentHistory, in.Messages)
+func (agent *Agent) Completions(ctx context.Context, in []Message) (*CCRes, error) {
+	currentHistory := make([]Message, len(in))
+	copy(currentHistory, in)
 
 	for i := 0; i < agent.toolMaxCall; i++ {
 		resp, err := agent.provider.Chat(ctx, CCReq{

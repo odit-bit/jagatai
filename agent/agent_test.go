@@ -185,7 +185,7 @@ func TestAgent_Completions(t *testing.T) {
 
 			a := agent.New("test-model", tc.provider, agent.WithTool(tp...))
 
-			res, err := a.Completions(context.Background(), tc.req)
+			res, err := a.Completions(context.Background(), tc.req.Messages)
 
 			if tc.expectedError != "" {
 				require.Error(t, err)
