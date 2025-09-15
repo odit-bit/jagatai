@@ -5,7 +5,7 @@
 provider: # OpenAI api compatible backend
   name: "ollama"
   model: "qwen3:1.7b" #Default
-  api_key: ""
+  key: ""
 
 #
 # tools:

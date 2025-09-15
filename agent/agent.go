@@ -80,10 +80,6 @@ type CompletionOptions struct {
 	Stream bool
 }
 
-type CompletionInput struct {
-	Content string
-}
-
 func (agent *Agent) Completions(ctx context.Context, req *CCReq) (*CCRes, error) {
 	req.Model = agent.model
 	req.Tools = agent.tp.ToSlice()

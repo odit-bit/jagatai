@@ -37,20 +37,10 @@ var ServerCMD = cobra.Command{
 		defer stop()
 
 		// config file
-		cfg := config.Config{}
-		configFilepath, _ := cmd.Flags().GetString(config.Flag_srv_configfile)
-		if err := config.UnmarshalConfigFile(configFilepath, &cfg); err != nil {
-			slog.Error(err.Error())
-			return err
-		}
-		if err := config.BindConfigEnv(&cfg); err != nil {
-			slog.Error(err.Error())
-			return err
-		}
-
-		if err := config.BindCobraFlags(&cfg, cmd.Flags()); err != nil {
-			slog.Error(err.Error())
-			return err
+		cfg, err := config.LoadAndValidate(cmd.Flags())
+		if err != nil {
+			slog.Error("invalid configuration", "error", err)
+			return fmt.Errorf("invalid configuration: %w", err)
 		}
 
 		// // Handle shutdown properly so nothing leaks.
@@ -76,13 +66,12 @@ var ServerCMD = cobra.Command{
 
 		// provider
 		var provider agent.Provider
-		var err error
 
 		switch cfg.Provider.Name {
 		case "openai":
 			provider, err = driver.NewOpenAIAdapter(cfg.Provider.ApiKey)
 		case "genai":
-			provider, err = driver.NewGenaiAdapter(cfg.Provider.ApiKey)
+			provider, err = driver.NewGeminiAdapter(cfg.Provider.ApiKey)
 		default:
 			err = fmt.Errorf("unknown provider specified in config: %s", cfg.Provider.Name)
 		}
