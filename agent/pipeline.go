@@ -4,6 +4,10 @@ import (
 	"context"
 )
 
+type Payload struct {
+	Request *CCReq
+}
+
 type NextFunc func(ctx context.Context, req *CCReq) (*CCRes, error)
 
 type MiddlewareFunc func(ctx context.Context, req *CCReq, next NextFunc) (*CCRes, error)
@@ -27,19 +31,19 @@ func (cp *completionsPipeline) AddMiddleware(middleware ...MiddlewareFunc) {
 	cp.pipeline = append(cp.pipeline, middleware...)
 }
 
-func (cp *completionsPipeline) Completions(ctx context.Context, req *CCReq) (*CCRes, error) {
+func (cp *completionsPipeline) Completions(ctx context.Context, in CCReq) (*CCRes, error) {
 
-	final := NextFunc(func(ctx context.Context, req *CCReq) (*CCRes, error) {
-		return cp.agent.Completions(ctx, req)
+	final := NextFunc(func(ctx context.Context, final *CCReq) (*CCRes, error) {
+		return cp.agent.Completions(ctx, *final)
 	})
 
 	chain := final
 	for _, currentMiddleware := range cp.pipeline {
 		next := chain
-		chain = NextFunc(func(ctx context.Context, req *CCReq) (*CCRes, error) {
-			return currentMiddleware(ctx, req, next)
+		chain = NextFunc(func(ctx context.Context, curIn *CCReq) (*CCRes, error) {
+			return currentMiddleware(ctx, curIn, next)
 		})
 	}
 
-	return chain(ctx, req)
+	return chain(ctx, &in)
 }

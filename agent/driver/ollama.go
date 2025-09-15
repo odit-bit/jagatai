@@ -142,17 +142,6 @@ func (oapi *OllamaAPI) ChatGen(ctx context.Context) (any, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-// return false if dst is not supported.
-func TransformTool(tool agent.Tool, dst any) bool {
-	switch v := dst.(type) {
-	case *ollama.Tool:
-		OllamaTransformTool(tool, v)
-		return true
-	default:
-		return false
-	}
-}
-
 // Transform takes a ToolA and produces the equivalent ToolB.
 func OllamaTransformTool(aTool agent.Tool, bTool *ollama.Tool) {
 	// var bTool ollama.Tool

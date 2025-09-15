@@ -16,11 +16,11 @@ import (
 
 // mockAgent provides a mock implementation of the Agent interface for testing.
 type mockAgent struct {
-	CompletionsFunc func(ctx context.Context, req *agent.CCReq) (*agent.CCRes, error)
+	CompletionsFunc func(ctx context.Context, req agent.CCReq) (*agent.CCRes, error)
 }
 
 // Completions implements the Agent interface for the mockAgent.
-func (m *mockAgent) Completions(ctx context.Context, req *agent.CCReq) (*agent.CCRes, error) {
+func (m *mockAgent) Completions(ctx context.Context, req agent.CCReq) (*agent.CCRes, error) {
 	if m.CompletionsFunc != nil {
 		return m.CompletionsFunc(ctx, req)
 	}

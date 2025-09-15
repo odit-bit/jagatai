@@ -3,6 +3,7 @@ package agent_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -24,12 +25,16 @@ func (mp *mockProvider) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 	if mp.ChatFunc != nil {
 		return mp.ChatFunc(ctx, req)
 	}
+	if len(req.Messages) == 0 {
+		return nil, fmt.Errorf("message cannot be nil")
+	}
 	query := req.Messages[len(req.Messages)-1]
 	res := &agent.CCRes{
 		Choices: []agent.Choice{
 			{Message: query},
 		},
 	}
+
 	if len(req.Tools) > 0 {
 		if strings.Contains(query.Text, "time") {
 			tools := req.Tools
@@ -46,17 +51,14 @@ func (mp *mockProvider) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 
 	return res, nil
 }
-func newMockProviderFunc(key string) (agent.Provider, error) {
-	return &mockProvider{}, nil
-}
 
-var req_tool = agent.CCReq{
-	Messages: []agent.Message{
-		{
-			Text: "current time",
-		},
-	},
-}
+// var req_with_tool = agent.CCReq{
+// 	Messages: []agent.Message{
+// 		{
+// 			Text: "current time",
+// 		},
+// 	},
+// }
 
 func Test_agent_pipe(t *testing.T) {
 	tp, err := tooldef.Build(t.Context(), []tooldef.Config{{Name: xtime.Namespace}})
@@ -65,12 +67,26 @@ func Test_agent_pipe(t *testing.T) {
 	}
 
 	mp := mockProvider{}
-	a, _ := agent.NewPipe("test", &mp, agent.WithMaxToolCall(3), agent.WithTool(tp...))
+	a, err := agent.NewPipe("test", &mp, agent.WithMaxToolCall(3), agent.WithTool(tp...))
+	require.ErrorIs(t, err, nil)
+
 	a.AddMiddleware(func(ctx context.Context, req *agent.CCReq, next agent.NextFunc) (*agent.CCRes, error) {
 		// req.Messages = append(req.Messages, agent.Message{Role: "string", Content: "add by middleware"})
+		if len(req.Messages) == 0 {
+			return nil, fmt.Errorf("middleware: message cannot be nil")
+		}
 		return next(ctx, req)
 	})
-	res, err := a.Completions(t.Context(), &req_tool)
+
+	req := agent.CCReq{
+		Messages: []agent.Message{
+			{
+				Text: "current time",
+			},
+		},
+	}
+
+	res, err := a.Completions(t.Context(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +185,7 @@ func TestAgent_Completions(t *testing.T) {
 
 			a := agent.New("test-model", tc.provider, agent.WithTool(tp...))
 
-			res, err := a.Completions(context.Background(), &tc.req)
+			res, err := a.Completions(context.Background(), tc.req)
 
 			if tc.expectedError != "" {
 				require.Error(t, err)

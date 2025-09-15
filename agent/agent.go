@@ -80,18 +80,27 @@ type CompletionOptions struct {
 	Stream bool
 }
 
-func (agent *Agent) Completions(ctx context.Context, req *CCReq) (*CCRes, error) {
-	req.Model = agent.model
-	req.Tools = agent.tp.ToSlice()
-	req.ToolChoice = "auto"
+func (agent *Agent) Completions(ctx context.Context, in CCReq) (*CCRes, error) {
+	currentHistory := make([]Message, len(in.Messages))
+	copy(currentHistory, in.Messages)
 
-	resp, err := agent.provider.Chat(ctx, *req)
-	if err != nil {
-		return nil, fmt.Errorf("agent provider: %v", err)
-	}
+	for i := 0; i < agent.toolMaxCall; i++ {
+		resp, err := agent.provider.Chat(ctx, CCReq{
+			Model:      agent.model,
+			Messages:   currentHistory,
+			Tools:      agent.tp.ToSlice(),
+			ToolChoice: "auto",
+		})
 
-	// TOOL CALL
-	for i := 0; i < agent.toolMaxCall && resp.IsToolCall(); i++ {
+		if err != nil {
+			return nil, fmt.Errorf("agent provider: %v", err)
+		}
+
+		if !resp.IsToolCall() {
+			return resp, nil
+		}
+
+		// TOOL CALL
 		for _, tc := range resp.Choices[0].Message.Toolcalls {
 			toolResp, err := agent.tp.Invoke(ctx, tc.Function)
 			if err != nil {
@@ -101,24 +110,16 @@ func (agent *Agent) Completions(ctx context.Context, req *CCReq) (*CCRes, error)
 			}
 			slog.Debug("agent_tool_call", "function", tc.Function, "error", err)
 
-			req.Messages = append(req.Messages, resp.Choices[0].Message, Message{
+			toolRespMessage := Message{
 				Role:         "tool",
-				Text:         "",
 				ToolCallID:   tc.ID,
-				Toolcalls:    []ToolCall{tc},
 				ToolResponse: toolResp,
-			})
-
-		}
-
-		// call the provider with tools response
-		resp, err = agent.provider.Chat(ctx, *req)
-		if err != nil {
-			return nil, fmt.Errorf("agent provider (turn %d): %v", i+1, err)
+			}
+			currentHistory = append(currentHistory, toolRespMessage)
 		}
 	}
 
-	return resp, nil
+	return nil, fmt.Errorf("max tool calls exceed")
 }
 
 func (agent *Agent) SetModel(model string) error {

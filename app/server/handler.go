@@ -34,7 +34,7 @@ func (cr *ChatRequest) validate() error {
 }
 
 type Agent interface {
-	Completions(ctx context.Context, req *agent.CCReq) (*agent.CCRes, error)
+	Completions(ctx context.Context, req agent.CCReq) (*agent.CCRes, error)
 }
 
 func HandleAgent(ctx context.Context, a Agent, e *echo.Echo) {
@@ -58,7 +58,7 @@ func HandleAgent(ctx context.Context, a Agent, e *echo.Echo) {
 			return c.JSON(400, echo.Map{"error": "bad json format."})
 		}
 
-		output, err := a.Completions(c.Request().Context(), &agent.CCReq{
+		output, err := a.Completions(c.Request().Context(), agent.CCReq{
 			Messages: input.Messages,
 			Think:    input.Think,
 			Stream:   false,
