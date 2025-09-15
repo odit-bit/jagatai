@@ -13,10 +13,11 @@ import (
 var _ agent.Provider = (*GeminiAdapter)(nil)
 
 type GeminiAdapter struct {
-	cli *genai.Client
+	cli  *genai.Client
+	conf *Config
 }
 
-func NewGeminiAdapter(key string) (agent.Provider, error) {
+func NewGeminiAdapter(ctx context.Context, key string, config *Config) (*GeminiAdapter, error) {
 	cli, err := genai.NewClient(context.Background(), &genai.ClientConfig{
 		APIKey:  key,
 		Backend: genai.BackendGeminiAPI,
@@ -27,7 +28,13 @@ func NewGeminiAdapter(key string) (agent.Provider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed start gemini_adapter: %s", err)
 	}
-	return &GeminiAdapter{cli: cli}, nil
+
+	ga := &GeminiAdapter{
+		cli:  cli,
+		conf: config,
+	}
+
+	return ga, nil
 }
 
 // Chat implements agent.Provider.
@@ -85,10 +92,11 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 		SystemInstruction: &sys,
 		SafetySettings:    safetySetting,
 		ResponseModalities: []string{
-			// string(genai.ModalityAudio),
-			// string(genai.ModalityImage),
 			string(genai.ModalityText),
 		},
+		TopP:        g.conf.TopP,
+		TopK:        g.conf.TopK,
+		Temperature: g.conf.Temperature,
 	})
 
 	if err != nil {

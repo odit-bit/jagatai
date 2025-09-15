@@ -9,7 +9,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/odit-bit/jagatai/agent"
 	"github.com/odit-bit/jagatai/agent/driver"
-	_ "github.com/odit-bit/jagatai/agent/driver"
 	"github.com/odit-bit/jagatai/agent/middleware"
 	"github.com/odit-bit/jagatai/agent/tooldef"
 	_ "github.com/odit-bit/jagatai/agent/toolprovider"
@@ -26,7 +25,6 @@ func init() {
 	ServerCMD.Flags().String(config.Flag_llm_key, "", "provider's api key")
 	ServerCMD.Flags().String(config.Flag_llm_name, "", "provider's name")
 	ServerCMD.Flags().String(config.Flag_llm_model, "", "base model agent use")
-
 }
 
 var ServerCMD = cobra.Command{
@@ -68,12 +66,18 @@ var ServerCMD = cobra.Command{
 		var provider agent.Provider
 
 		switch cfg.Provider.Name {
+		case "ollama":
+			provider, err = driver.NewOllamaAdapter(ctx, cfg.Provider.ApiKey, &cfg.Provider.Extra)
+
 		case "openai":
 			provider, err = driver.NewOpenAIAdapter(cfg.Provider.ApiKey)
+
 		case "genai":
-			provider, err = driver.NewGeminiAdapter(cfg.Provider.ApiKey)
+			provider, err = driver.NewGeminiAdapter(ctx, cfg.Provider.ApiKey, &cfg.Provider.Extra)
+
 		default:
 			err = fmt.Errorf("unknown provider specified in config: %s", cfg.Provider.Name)
+
 		}
 		if err != nil {
 			slog.Error("failed to create agent provider", "error", err)
@@ -88,10 +92,6 @@ var ServerCMD = cobra.Command{
 		}
 		toolOpt := agent.WithTool(t...)
 
-		if err != nil {
-			slog.Error("jagatAI init provider", "error", err.Error())
-			return err
-		}
 		// agent
 		a, err := agent.NewPipe(
 			cfg.Provider.Model,

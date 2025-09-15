@@ -5,10 +5,10 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"strings"
 
+	"github.com/odit-bit/jagatai/agent/driver"
 	"github.com/odit-bit/jagatai/agent/tooldef"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -33,7 +33,6 @@ var (
 
 type Config struct {
 	Server   ServerConfig     `yaml:"server"`
-	Agent    AgentConfig      `yaml:"agent"`
 	Provider Provider         `yaml:"provider"`
 	Tools    []tooldef.Config `yaml:"tools"`
 }
@@ -44,14 +43,11 @@ type ServerConfig struct {
 }
 
 type Provider struct {
-	Name     string `yaml:"name"`
-	Model    string `yaml:"model"`
-	ApiKey   string `yaml:"key"`
-	Endpoint string `yaml:"endpoint"`
-}
-
-type AgentConfig struct {
-	// Model string `yaml:"model"`
+	Name     string        `yaml:"name"`
+	Model    string        `yaml:"model"`
+	ApiKey   string        `yaml:"key"`
+	Endpoint string        `yaml:"endpoint"`
+	Extra    driver.Config `yaml:"extra"`
 }
 
 // Validate checks the configuration for correctness.
@@ -130,7 +126,5 @@ func LoadAndValidate(flags *pflag.FlagSet) (*Config, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-
-	slog.Debug("Config")
 	return &cfg, nil
 }

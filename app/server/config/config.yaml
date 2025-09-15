@@ -2,11 +2,16 @@
   address: "127.0.0.1:11823" #default server address listening to
   debug: false
 
-provider: # OpenAI api compatible backend
+provider: # llm backend
   name: "ollama"
   model: "qwen3:1.7b" #Default
   key: ""
-
+  extra:
+    # endpoint: "http://127.0.0.1:11434" #ollama default
+    # topP: 0.98
+    # topK: 40
+    # minP: 0.02
+    # temperature: 0.8
 #
 # tools:
 #   - name: "openmeteo"

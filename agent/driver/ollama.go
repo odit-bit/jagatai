@@ -17,27 +17,30 @@ const (
 	_ollama_completion_path = "v1/chat/completions"
 )
 
-// init simple OpenAI compatible api
-func NewOllamaAdapter(key string) (agent.Provider, error) {
-	e := endpoints{}
-	e.Set(completionPath, _ollama_domain, _ollama_completion_path)
-
-	return &Default{
-		hc: http.DefaultClient,
-		// domain:    _ollama_domain,
-		apiKey:    key,
-		maxRetry:  _http_default_max_retry,
-		endpoints: e,
-	}, nil
-}
-
 //-----------------------------------------------
 
 var _ agent.Provider = (*OllamaAPI)(nil)
 
 type OllamaAPI struct {
-	// conf OllamaConfig
-	c *ollama.Client
+	c    *ollama.Client
+	conf *Config
+}
+
+func NewOllamaAdapter(ctx context.Context, key string, config *Config) (*OllamaAPI, error) {
+	endpoint := config.Endpoint
+	if endpoint == "" {
+		endpoint = _ollama_domain
+	}
+	oUrl, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	cli := ollama.NewClient(oUrl, http.DefaultClient)
+	oa := OllamaAPI{
+		c:    cli,
+		conf: config,
+	}
+	return &oa, err
 }
 
 // Chat implements LLM.
@@ -66,11 +69,16 @@ func (oapi *OllamaAPI) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes,
 		Messages: msgs,
 		Stream:   &req.Stream,
 		Think:    &req.Think,
-		Options:  nil,
-		Tools:    tools,
+		Options: map[string]any{
+			"temperature": oapi.conf.Temperature,
+			"top_p":       oapi.conf.TopP,
+			"top_k":       oapi.conf.TopK,
+			"min_p":       oapi.conf.MinP,
+		},
+		Tools: tools,
 	}
 
-	resp := new(agent.CCRes)
+	var resp *agent.CCRes
 	err := oapi.c.Chat(ctx, oReq, func(cr ollama.ChatResponse) error {
 		tcs := []agent.ToolCall{}
 		for _, tc := range cr.Message.ToolCalls {
@@ -105,19 +113,6 @@ func (oapi *OllamaAPI) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes,
 	}
 	return resp, nil
 
-}
-
-func NewOllama(addr string) *OllamaAPI {
-
-	e, _ := url.Parse(addr)
-	c := ollama.NewClient(e, http.DefaultClient)
-
-	// def := NewDefault(conf.OllamaEndpoint)
-	oa := OllamaAPI{
-		c: c,
-	}
-
-	return &oa
 }
 
 func (oapi *OllamaAPI) Models(ctx context.Context) (*agent.Models, error) {
