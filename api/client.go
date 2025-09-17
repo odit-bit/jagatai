@@ -7,22 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
-
-	"github.com/odit-bit/jagatai/agent"
 )
 
-type Message agent.Message
-
-type ChatRequest struct {
-	Messages []Message
-}
-
-type ChatResponse struct {
-	Message    Message
-	DoneReason string
-	CreatedAt  time.Time
-}
+const (
+	default_address = "http://127.0.0.1:11823"
+)
 
 type Client struct {
 	client   *http.Client
@@ -31,6 +20,9 @@ type Client struct {
 }
 
 func NewClient(endpoint, key string) *Client {
+	if endpoint == "" {
+		endpoint = default_address
+	}
 	return &Client{
 		client:   http.DefaultClient,
 		Endpoint: endpoint,
