@@ -5,7 +5,9 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/odit-bit/jagatai/jagat/agent/driver"
@@ -14,51 +16,27 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	Flag_llm_key = "p_key"
-	// Flag_llm_address = "p_addr"
-	Flag_llm_name  = "p_name"
-	Flag_llm_model = "p_model"
-
-	Flag_srv_addr       = "addr"
-	Flag_srv_debug      = "debug"
-	Flag_srv_configfile = "config"
-)
-
 //go:embed config.yaml
 var defaultConfig embed.FS
 
-// var (
-// 	_default_config_file = "config.yaml"
-// )
-
-var FlagSet = pflag.NewFlagSet("telegram_bot_flags", pflag.PanicOnError)
-
-func init() {
-	FlagSet.String(Flag_srv_addr, "", "server address")
-	FlagSet.Bool(Flag_srv_debug, false, "debug log")
-	FlagSet.String(Flag_srv_configfile, "", "path to config file")
-
-	FlagSet.String(Flag_llm_key, "", "provider's api key")
-	FlagSet.String(Flag_llm_name, "", "provider's name")
-	FlagSet.String(Flag_llm_model, "", "base model agent use")
-}
-
+// holds aggregats configuration across jagat environment.
 type Config struct {
 	Server   ServerConfig     `yaml:"server"`
 	Provider Provider         `yaml:"provider"`
 	Tools    []tooldef.Config `yaml:"tools"`
 }
 
+// jagat server config
 type ServerConfig struct {
 	Address string `yaml:"address"`
 	Debug   bool   `yaml:"debug"`
 }
 
+// external llm provider
 type Provider struct {
 	Name     string        `yaml:"name"`
 	Model    string        `yaml:"model"`
-	ApiKey   string        `yaml:"key"`
+	ApiKey   string        `yaml:"apikey"`
 	Endpoint string        `yaml:"endpoint"`
 	Extra    driver.Config `yaml:"extra"`
 }
@@ -77,18 +55,6 @@ func (c *Config) Validate() error {
 		return errors.New("provider name is required")
 	}
 
-	// add a check for supported providers
-	supportedProviders := map[string]bool{"ollama": true, "openai": true, "genai": true, "genai_rest": true}
-	if !supportedProviders[c.Provider.Name] {
-		return fmt.Errorf("unsupported provider: %s", c.Provider.Name)
-	}
-	switch c.Provider.Name {
-	case "genai", "openai":
-		if c.Provider.ApiKey == "" {
-			return fmt.Errorf("provider chosen need api key: %v", c.Provider.Name)
-		}
-	}
-
 	if c.Provider.Model == "" {
 		return errors.New("provider model is required")
 	}
@@ -96,26 +62,10 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// load configuration from default embedded config.yaml, provided config.yaml, env and flags before validation.
 func LoadAndValidate(flags *pflag.FlagSet) (*Config, error) {
 	v := viper.New()
-
-	// 1. Set default value by reading from the embedded config.yaml
-	defaultBytes, _ := defaultConfig.ReadFile("config.yaml")
 	v.SetConfigType("yaml")
-	if err := v.ReadConfig(bytes.NewReader(defaultBytes)); err != nil {
-		return nil, fmt.Errorf("failed to read default config: %w", err)
-	}
-
-	// 2.Set from external config file if provided
-	configFile, _ := flags.GetString(Flag_srv_configfile)
-	if configFile != "" {
-		v.SetConfigFile(configFile)
-		if err := v.MergeInConfig(); err != nil {
-			if !errors.As(err, &viper.ConfigFileNotFoundError{}) {
-				return nil, fmt.Errorf("failed to merge config file: %w", err)
-			}
-		}
-	}
 
 	// 3. Bind env variable
 	v.SetEnvPrefix("JAGATAI")
@@ -123,11 +73,32 @@ func LoadAndValidate(flags *pflag.FlagSet) (*Config, error) {
 	v.AutomaticEnv()
 
 	// 4. Bind Pflags flags
-	v.BindPFlag("server.address", flags.Lookup(Flag_srv_addr))
-	v.BindPFlag("server.debug", flags.Lookup(Flag_srv_debug))
-	v.BindPFlag("provider.apikey", flags.Lookup(Flag_llm_key))
-	v.BindPFlag("provider.name", flags.Lookup(Flag_llm_name))
-	v.BindPFlag("provider.model", flags.Lookup(Flag_llm_model))
+	for flagName, configKey := range flagToConfigKeyMap {
+		// if err := v.BindPFlag(configKey, flags.Lookup(flagName)); err != nil {
+		// 	return nil, fmt.Errorf("failed to bind flags %s:%w", flagName, err)
+		// }
+		v.BindPFlag(configKey, flags.Lookup(flagName))
+	}
+
+	// 1. Set default value by reading from the embedded config.yaml
+	defaultBytes, _ := defaultConfig.ReadFile("config.yaml")
+	if err := v.ReadConfig(bytes.NewReader(defaultBytes)); err != nil {
+		return nil, fmt.Errorf("failed to read default config: %w", err)
+	}
+
+	// 2.Set from external config file if provided
+	configFile, _ := flags.GetString(FLAG_SERVER_CONFIG_FILE)
+	if configFile != "" {
+		f, err := os.Open(configFile)
+		if err != nil {
+			return nil, fmt.Errorf("config : %w", err)
+		}
+		defer f.Close()
+		providedBytes, _ := io.ReadAll(f)
+		if err := v.ReadConfig(bytes.NewReader(providedBytes)); err != nil {
+			return nil, fmt.Errorf("failed to read default config: %w", err)
+		}
+	}
 
 	// 5. UNmarshal
 	var cfg Config

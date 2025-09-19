@@ -2,26 +2,65 @@ package agent
 
 import (
 	"context"
+	"fmt"
 )
 
 const (
 	Parameter_Type_Object = "object"
 )
 
+// hold the tools
+type Tools []ToolProvider
+
+// type ToolProvider struct {
+// 	Definition Tool
+// 	Provider   XTool
+// }
+
+type ToolProvider interface {
+	ToolDefinition
+	XTool
+}
+
+type ToolDefinition interface {
+	Def() Tool
+}
+
+func (t Tools) Invoke(ctx context.Context, fc FunctionCall) (*ToolResponse, error) {
+	for _, tp := range t {
+		def := tp.Def()
+		if def.Function.Name == fc.Name {
+			res, err := tp.Call(ctx, fc)
+			if err != nil {
+				return nil, err
+			}
+			return res, nil
+		}
+	}
+	return nil, fmt.Errorf("tools not found")
+}
+
+func (tp Tools) Def() []Tool {
+	copyDef := make([]Tool, len(tp))
+	for i := range tp {
+		copyDef[i] = tp[i].Def()
+	}
+	return copyDef
+}
+
+type XTool interface {
+	// invoke the tool call
+	Call(ctx context.Context, fn FunctionCall) (*ToolResponse, error)
+	// the tool will not register and use if Ping method return error at build time.
+	Ping(ctx context.Context) error
+}
+
 // Tool wraps a single tool entry.
+// it will marshal into json before send to agent provider.
 type Tool struct {
 	Type     string   `json:"type"`
 	Function Function `json:"function"`
-
-	call FunctionCallbackFunc
 }
-
-// TODO: it will introduce ambiguity as set callback function defined with method or when struct constructed
-func (t *Tool) SetCallback(fn FunctionCallbackFunc) {
-	t.call = fn
-}
-
-type FunctionCallbackFunc func(ctx context.Context, fn FunctionCall) (*ToolResponse, error)
 
 // Function describes the function metadata and its parameter schema.
 type Function struct {

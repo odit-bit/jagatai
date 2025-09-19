@@ -13,18 +13,19 @@ import (
 )
 
 func Test_genai(t *testing.T) {
-	tool := xtime.NewTooldef(tooldef.Config{}).Tooling()
-
-	fd := ToFunctionDeclaration(&tool)
+	tool := xtime.NewToolProvider(tooldef.Config{})
+	def := tool.Def()
+	fd := ToFunctionDeclaration(&def)
 
 	//function
-	if fd.Description != tool.Function.Description {
-		t.Fatalf("different function description, got %v expect %v", tool.Function.Description, fd.Description)
+	fc := def.Function
+	if fd.Description != fc.Description {
+		t.Fatalf("different function description, got %v expect %v", fc.Description, fd.Description)
 	}
 
 	//parameter
 	actP := fd.Parameters
-	expP := tool.Function.Parameters
+	expP := fc.Parameters
 	for k, v := range actP.Properties {
 		vExpect := expP.Properties[k]
 		if vExpect.Description != v.Description {

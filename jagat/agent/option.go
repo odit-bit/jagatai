@@ -1,22 +1,20 @@
 package agent
 
 type options struct {
-	tools       ToolsMap
+	tools       Tools
 	toolMaxCall int
 }
 
 type OptionFunc func(o *options)
 
-func WithTool(tools ...Tool) OptionFunc {
+// bind tool into model
+func WithTool(tools ...ToolProvider) OptionFunc {
 	return func(o *options) {
-		tmap := make(ToolsMap)
-		for _, t := range tools {
-			tmap[t.Function.Name] = t
-		}
-		o.tools = tmap
+		o.tools = tools
 	}
 }
 
+// set maximum tool call agent can invoke, not implemented yet
 func WithMaxToolCall(n int) OptionFunc {
 	return func(o *options) {
 		o.toolMaxCall = n

@@ -134,7 +134,7 @@ func TestAgent_Completions(t *testing.T) {
 					return nil, errors.New("provider error")
 				},
 			},
-			expectedError: "agent provider: provider error",
+			expectedError: "failed executing node 'agent' : provider error",
 		},
 	}
 
@@ -152,7 +152,7 @@ func TestAgent_Completions(t *testing.T) {
 				require.Error(t, err)
 				assert.Equal(t, tc.expectedError, err.Error())
 			} else {
-				require.NoError(t, err)
+				require.NoError(t, err, err)
 				assert.Equal(t, tc.expectedText, msg.Text(), msg)
 			}
 		})

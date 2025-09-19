@@ -15,48 +15,29 @@ func init() {
 	tooldef.Register("osm", NewTooldef)
 }
 
+type toolDefinition struct {
+	def agent.Tool
+}
+
+func (d *toolDefinition) Def() agent.Tool {
+	return d.def
+}
+
+var _ agent.XTool = (*OsmTool)(nil)
+
+type OsmTool struct {
+	cli *http.Client
+}
+
 type GeoCodeResult struct {
 	Lat         string `json:"lat"`
 	Lon         string `json:"lon"`
 	DisplayName string `json:"display_name"`
 }
 
-var _ tooldef.Provider = (*OsmTool)(nil)
-
-type OsmTool struct {
-	cli *http.Client
-}
-
-func NewTooldef(cft tooldef.Config) tooldef.Provider {
-	return &OsmTool{
-		cli: http.DefaultClient,
-	}
-}
-
-func (osm *OsmTool) Tooling() agent.Tool {
-	t := agent.Tool{
-		Type: "Function",
-		Function: agent.Function{
-			Name:        "open_street_map",
-			Description: "fetch geo location info (latitude, longitude)",
-			Parameters: agent.ParameterSchema{
-				Type: agent.Parameter_Type_Object,
-				Properties: map[string]agent.ParameterDefinition{
-					"address": {
-						Type:        "string",
-						Description: "address of the place. example (jakarta or jakarta, indonesia)",
-					},
-				},
-				Required: []string{"address"},
-			},
-		},
-	}
-	t.SetCallback(osm.callback)
-	return t
-}
-
-func (osm *OsmTool) callback(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
+func (osm *OsmTool) Call(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
 	toolresponse := agent.ToolResponse{
+		Name:   fc.Name,
 		Output: map[string]any{},
 	}
 
@@ -107,6 +88,45 @@ func (osm *OsmTool) callback(ctx context.Context, fc agent.FunctionCall) (*agent
 
 }
 
-func (osm *OsmTool) Ping(ctx context.Context) (bool, error) {
-	return true, nil
+func (osm *OsmTool) Ping(ctx context.Context) error {
+	return nil
+}
+
+// implement agent.ToolProvider
+type toolProvider struct {
+	agent.ToolDefinition
+	agent.XTool
+}
+
+func NewTooldef(cft tooldef.Config) agent.ToolProvider {
+	provider := &OsmTool{
+		cli: http.DefaultClient,
+	}
+
+	definition := agent.Tool{
+		Type: "Function",
+		Function: agent.Function{
+			Name:        "open_street_map",
+			Description: "fetch geo location only (latitude, longitude), it will not give anything else",
+			Parameters: agent.ParameterSchema{
+				Type: agent.Parameter_Type_Object,
+				Properties: map[string]agent.ParameterDefinition{
+					"address": {
+						Type:        "string",
+						Description: "name or street or place. 'surabaya', '5th avenue, lenox' ",
+					},
+				},
+				Required: []string{"address"},
+			},
+		},
+	}
+
+	tp := &toolProvider{
+		ToolDefinition: &toolDefinition{
+			def: definition,
+		},
+		XTool: provider,
+	}
+
+	return tp
 }

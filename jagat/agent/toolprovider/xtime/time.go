@@ -13,14 +13,24 @@ const (
 )
 
 func init() {
-	tooldef.Register(Namespace, NewTooldef)
+	tooldef.Register(Namespace, NewToolProvider)
 }
 
-var _ tooldef.Provider = (*clock)(nil)
+var _ agent.ToolProvider = (*clock)(nil)
 
-type clock struct{}
+type clock struct {
+	def agent.Tool
+}
 
-func (o *clock) Tooling() agent.Tool {
+func (c *clock) Ping(ctx context.Context) error {
+	return nil
+}
+
+func (c *clock) Def() agent.Tool {
+	return c.def
+}
+
+func NewToolProvider(cfg tooldef.Config) agent.ToolProvider {
 	t := agent.Tool{
 		Type: "function",
 		Function: agent.Function{
@@ -39,21 +49,17 @@ func (o *clock) Tooling() agent.Tool {
 		},
 	}
 
-	t.SetCallback(func(ctx context.Context, fn agent.FunctionCall) (*agent.ToolResponse, error) {
-		return &agent.ToolResponse{
-			Output: map[string]any{
-				"current_time_utc": time.Now().UTC().String(),
-			},
-		}, nil
-	})
-
-	return t
+	return &clock{
+		def: t,
+	}
 }
 
-func (o *clock) Ping(_ context.Context) (bool, error) {
-	return true, nil
-}
+func (o *clock) Call(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
+	tr := &agent.ToolResponse{
+		Output: map[string]any{
+			"current_time_utc": time.Now().UTC().String(),
+		},
+	}
 
-func NewTooldef(cfg tooldef.Config) tooldef.Provider {
-	return &clock{}
+	return tr, nil
 }
