@@ -22,7 +22,7 @@ tools:
     apikey: ""
   - name: "osm"
   - name: "tavily"
-    apikey: "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"
+    apikey: ""
 
 #
 #
