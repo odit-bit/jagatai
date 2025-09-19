@@ -7,67 +7,35 @@ import (
 	"sync"
 )
 
-const (
-	toolMaxCallDefault = 3
-)
-
+// orchestrate execution flow.
 type Agent struct {
 	mx       sync.Mutex
 	provider Provider
-	tp       ToolsMap
+	tools    Tools
 
 	toolMaxCall int
 }
 
 func New(provider Provider, opts ...OptionFunc) *Agent {
 
-	o := options{
-		toolMaxCall: toolMaxCallDefault,
-	}
+	o := options{}
 
 	for _, fn := range opts {
 		fn(&o)
 	}
 
 	if o.tools == nil {
-		o.tools = ToolsMap{}
+		o.tools = Tools{}
 	}
 
 	a := &Agent{
 		mx:          sync.Mutex{},
 		provider:    provider,
-		tp:          o.tools,
+		tools:       o.tools,
 		toolMaxCall: o.toolMaxCall,
 	}
 
 	return a
-}
-
-// hold the tools
-type ToolsMap map[string]Tool
-
-func (t ToolsMap) Invoke(ctx context.Context, fc FunctionCall) (*ToolResponse, error) {
-	tool, ok := t[fc.Name]
-	if !ok {
-		return nil, fmt.Errorf("tools not found")
-	} else {
-		if tool.call == nil {
-			return nil, fmt.Errorf("tool failed invoke function: nil function")
-		}
-		res, err := tool.call(ctx, fc)
-		if err != nil {
-			return nil, err
-		}
-		return res, nil
-	}
-}
-
-func (tm ToolsMap) ToSlice() []Tool {
-	tools := []Tool{}
-	for _, tool := range tm {
-		tools = append(tools, tool)
-	}
-	return tools
 }
 
 type CompletionOptions struct {
@@ -75,7 +43,36 @@ type CompletionOptions struct {
 	Stream bool
 }
 
+func (a *Agent) completionDag(ctx context.Context, msgs []*Message) (*Message, error) {
+
+	graph := NewGraph()
+	agentNode := AgentNode{
+		provider: a.provider,
+		tools:    a.tools.Def(),
+	}
+	graph.AddNode(&agentNode)
+
+	for _, tool := range a.tools {
+		toolNode := NewToolNode(tool)
+		graph.AddNode(toolNode)
+	}
+
+	copyMsg := make([]*Message, len(msgs))
+	copy(copyMsg, msgs)
+	initState := State{
+		Message: copyMsg,
+	}
+
+	return graph.Run(ctx, "agent", initState)
+}
+
 func (a *Agent) Completion(ctx context.Context, msgs []*Message) (*Message, error) {
+	return a.completionDag(ctx, msgs)
+}
+
+
+//Deprecate, subjet to remove.
+func (a *Agent) completion(ctx context.Context, msgs []*Message) (*Message, error) {
 	currentHistory := make([]*Message, len(msgs))
 	copy(currentHistory, msgs)
 
@@ -83,7 +80,7 @@ func (a *Agent) Completion(ctx context.Context, msgs []*Message) (*Message, erro
 		resp, err := a.provider.Chat(ctx, CCReq{
 			// Model:      a.model,
 			Messages:   currentHistory,
-			Tools:      a.tp.ToSlice(),
+			Tools:      a.tools.Def(),
 			ToolChoice: "auto",
 		})
 
@@ -99,7 +96,7 @@ func (a *Agent) Completion(ctx context.Context, msgs []*Message) (*Message, erro
 		// TOOL CALL
 		toolResMsg := Message{Role: RoleAssistant}
 		for _, tc := range toolCalls {
-			toolResp, err := a.tp.Invoke(ctx, tc.Function)
+			toolResp, err := a.tools.Invoke(ctx, tc.Function)
 			if err != nil {
 				toolResp = &ToolResponse{
 					Name: tc.Function.Name,

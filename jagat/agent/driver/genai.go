@@ -18,7 +18,7 @@ type GeminiAdapter struct {
 	conf  *Config
 }
 
-func NewGeminiAdapter(ctx context.Context, model, key string, config *Config) (*GeminiAdapter, error) {
+func NewGeminiAdapter(model, key string, config *Config) (*GeminiAdapter, error) {
 	if model == "" {
 		return nil, fmt.Errorf("gemini_adapter model cannot be empty")
 	}
@@ -101,8 +101,8 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 
 	toolCall := []*agent.ToolCall{}
 	if resp.FunctionCalls() != nil {
-		for _, v := range resp.FunctionCalls() {
-			tc, err := toToolCall(v)
+		for _, fc := range resp.FunctionCalls() {
+			tc, err := mappingToToolCall(fc)
 			if err != nil {
 				return nil, fmt.Errorf("gemini_adapter failed conversion function call: %v", err)
 			}
@@ -133,6 +133,7 @@ func (g *GeminiAdapter) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes
 	return a, nil
 }
 
+// suppose to use for testing.
 func TestMessageToContent(src *agent.Message, dst *genai.Content) error {
 	return messageToContent(src, dst)
 }
@@ -151,7 +152,7 @@ func messageToContent(src *agent.Message, dst *genai.Content) error {
 			)
 
 		} else if p.Toolcall != nil {
-			part.FunctionCall, err = fromToolCall(p.Toolcall)
+			part.FunctionCall, err = mappingToFunctionCall(p.Toolcall)
 
 		} else if p.ToolResponse != nil {
 			part = genai.NewPartFromFunctionResponse(
@@ -170,6 +171,7 @@ func messageToContent(src *agent.Message, dst *genai.Content) error {
 	return nil
 }
 
+// encoding agent.Tool type into genai.Tool that gemini understand.
 func toolEncoding(src []agent.Tool) []*genai.Tool {
 	// Tool conversion
 	tools := []*genai.Tool{}
@@ -182,13 +184,13 @@ func toolEncoding(src []agent.Tool) []*genai.Tool {
 }
 
 // ToFunctionDeclaration converts a Tool into a genai.FunctionDeclaration.
-// This version correctly maps data types to the format required by the Google API.
+// This correctly maps data types to the format required by the gemini.
 func ToFunctionDeclaration(t *agent.Tool) *genai.FunctionDeclaration {
 	if t == nil {
 		return nil
 	}
 
-	// Helper function to map type strings to the API's required types.
+	// Helper function to map type strings to the gemini API's required types.
 	mapType := func(inputType string) genai.Type {
 		switch strings.ToLower(inputType) {
 		case "string":
@@ -234,9 +236,9 @@ func ToFunctionDeclaration(t *agent.Tool) *genai.FunctionDeclaration {
 	return declaration
 }
 
-// ToToolCall converts a genai.FunctionCall into a ToolCall.
+// converts a genai.FunctionCall response into a ToolCall that agent understand.
 // It returns an error if the arguments map cannot be marshaled to a JSON string.
-func toToolCall(fc *genai.FunctionCall) (*agent.ToolCall, error) {
+func mappingToToolCall(fc *genai.FunctionCall) (*agent.ToolCall, error) {
 	if fc == nil {
 		return nil, nil
 	}
@@ -260,7 +262,8 @@ func toToolCall(fc *genai.FunctionCall) (*agent.ToolCall, error) {
 	return toolCall, nil
 }
 
-func fromToolCall(tc *agent.ToolCall) (*genai.FunctionCall, error) {
+// mapping agent.Toolcall to genai.FunctionCall that gemini API need.
+func mappingToFunctionCall(tc *agent.ToolCall) (*genai.FunctionCall, error) {
 
 	if tc == nil {
 		return nil, nil
@@ -295,6 +298,10 @@ var safetySetting = []*genai.SafetySetting{
 	},
 	{
 		Category:  genai.HarmCategorySexuallyExplicit,
+		Threshold: genai.HarmBlockThresholdBlockNone,
+	},
+	{
+		Category:  genai.HarmCategoryCivicIntegrity,
 		Threshold: genai.HarmBlockThresholdBlockNone,
 	},
 }

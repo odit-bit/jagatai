@@ -13,11 +13,43 @@ provider: # llm backend
     # minP: 0.02
     # temperature: 0.8
 #
-# tools:
-#   - name: "openmeteo"
-#     endpoint: "https://api.open-meteo.com"
-#     api_key: ""
-#   - name: "clock"
-#     endpoint: ""
-#     api_key: ""
-#   - name: "osm"
+tools:
+  - name: "openmeteo"
+    endpoint: "https://api.open-meteo.com"
+    apikey: ""
+  - name: "clock"
+    endpoint: ""
+    apikey: ""
+  - name: "osm"
+  - name: "tavily"
+    apikey: "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"
+
+#
+#
+#
+# graph:
+#   entrypoint: "" # The name of the node to start
+#   nodes:
+#     - name: "node-1"
+#       type: ""
+#       config:
+#         connection_string: "" # postgres://user:pass@host:port/db
+#       edges:
+#         - target: "agent" # After this node runs, always go to the "agent" node.
+
+#     - name: "agent"
+#       type: "agent_router" # built-in type
+#       config:
+#       edges:
+#         #conditional routing
+#         - condition: "TOOL_CALL"
+#           target: "tool_executor"
+#         - condition: "END"
+#           target: "end"
+
+#     - name: "tool_executor"
+#       type: "tool_executor"
+#       config: {}
+#       edges:
+#         # target any tool runs
+#         - target: "agent"

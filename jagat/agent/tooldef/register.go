@@ -13,25 +13,24 @@ import (
 
 // configuration for 3rd party tool implementation
 type Config struct {
+	//name of tools that Register function use for discover
 	Name        string
+	//connection string for external call
 	Endpoint    string
+	//secret or api key for tool
 	ApiKey      string
+	//set true if tool need to make ping when it's build.
+	//see agent.ToolProvider for interface.
 	DisablePing bool
 }
 
-// represent tool provider
-type Provider interface {
-	Tooling() agent.Tool
-	Ping(ctx context.Context) (bool, error)
-}
+type ProviderConstructFunc func(cfg Config) agent.ToolProvider
 
-type ProviderFunc func(cfg Config) Provider
-
-var providers = make(map[string]ProviderFunc)
+var providers = make(map[string]ProviderConstructFunc)
 
 var dmutex sync.RWMutex
 
-func Register(name string, p ProviderFunc) {
+func Register(name string, p ProviderConstructFunc) {
 	dmutex.Lock()
 	defer dmutex.Unlock()
 	if p == nil {
@@ -49,10 +48,10 @@ func Count() int {
 	return len(providers)
 }
 
-func Build(ctx context.Context, cfgs []Config) ([]agent.Tool, error) {
+func Build(ctx context.Context, cfgs []Config) ([]agent.ToolProvider, error) {
 	//temporary list provider
 	type providerToBuild struct {
-		provider Provider
+		provider agent.ToolProvider
 		config   Config
 	}
 	toBuild := []providerToBuild{}
@@ -70,12 +69,10 @@ func Build(ctx context.Context, cfgs []Config) ([]agent.Tool, error) {
 	dmutex.RUnlock()
 	// --- Critical Section End --- Lock is now released.
 
-	t := []agent.Tool{}
+	t := []agent.ToolProvider{}
 	for _, item := range toBuild {
 		if !item.config.DisablePing {
-			if ok, err := item.provider.Ping(ctx); err != nil {
-				return nil, fmt.Errorf("tools build: %s", err)
-			} else if !ok {
+			if err := item.provider.Ping(ctx); err != nil {
 				slog.Warn(
 					fmt.Sprintf("skip build tool that not respond ping, Name: %s, Endpoint: %s",
 						item.config.Name, item.config.Endpoint,
@@ -85,9 +82,20 @@ func Build(ctx context.Context, cfgs []Config) ([]agent.Tool, error) {
 		}
 
 		//add tool
-		t = append(t, item.provider.Tooling())
+		t = append(t, item.provider)
 		slog.Debug("tool initate", "name", item.config.Name, "address", item.config.Endpoint)
 	}
 
 	return t, nil
+}
+
+// RegisteredTools returns a list of all registered tool provider names.
+func RegisteredTools() []string {
+	dmutex.RLock()
+	defer dmutex.RUnlock()
+	names := make([]string, 0, len(providers))
+	for name := range providers {
+		names = append(names, name)
+	}
+	return names
 }

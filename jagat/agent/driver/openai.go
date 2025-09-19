@@ -57,7 +57,7 @@ type Default struct {
 	config Config
 }
 
-func NewOpenAIAdapter(ctx context.Context, model, key string, config *Config) (agent.Provider, error) {
+func NewOpenAIAdapter( model, key string, config *Config) (agent.Provider, error) {
 	if model == "" {
 		return nil, fmt.Errorf("openai_adapter model cannot be empty")
 	}

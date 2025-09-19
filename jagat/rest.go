@@ -45,7 +45,6 @@ func RestHandler(ctx context.Context, a Agent, e *echo.Echo) {
 	if e == nil {
 		panic("got nil parameter")
 	}
-
 	e.POST("/v1/chat/completions", func(c echo.Context) error {
 		slog.Debug("got request")
 		if ok := IsJsonContentType(c.Request()); !ok {

@@ -43,8 +43,18 @@ func TestHandleAgentCompletions(t *testing.T) {
 		{
 			name: "successful completion",
 			requestBody: `{
-				"messages": [{"role": "user", "text": "hello"}]
-			}`,
+	"content": [
+		{
+			"role": "user",
+			"parts": [
+				{
+					"text": "current weather in bekasi !!"
+				}
+				
+			]
+		}
+	]
+}`,
 			contentType:        echo.MIMEApplicationJSON,
 			expectedStatusCode: http.StatusOK,
 			expectedResponse:   "mock response",

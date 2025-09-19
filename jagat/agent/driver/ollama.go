@@ -27,7 +27,7 @@ type OllamaAPI struct {
 	conf  *Config
 }
 
-func NewOllamaAdapter(ctx context.Context, model string, key string, config *Config) (*OllamaAPI, error) {
+func NewOllamaAdapter(model string, key string, config *Config) (*OllamaAPI, error) {
 	if model == "" {
 		return nil, fmt.Errorf("ollama_adapter cannot be empty")
 	}
@@ -115,23 +115,6 @@ func (oapi *OllamaAPI) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes,
 	}
 	return resp, nil
 
-}
-
-func (oapi *OllamaAPI) Models(ctx context.Context) (*agent.Models, error) {
-	res, err := oapi.c.List(ctx)
-	if err != nil {
-		return nil, err
-	}
-	models := agent.Models{}
-	for _, v := range res.Models {
-		models.Data = append(models.Data, agent.Model{
-			ID:      v.Name,
-			Object:  "model",
-			Created: agent.Timestamp(v.ModifiedAt.Unix()),
-			OwnedBy: "library",
-		})
-	}
-	return &models, nil
 }
 
 func (oapi *OllamaAPI) ChatGen(ctx context.Context) (any, error) {

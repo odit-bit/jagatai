@@ -15,7 +15,35 @@ import (
 	"github.com/odit-bit/jagatai/jagat/agent/tooldef"
 )
 
-var _ tooldef.Provider = (*WeatherTool)(nil)
+const (
+	Namespace = "openmeteo"
+)
+
+var definition = agent.Tool{
+	Type: "function",
+	Function: agent.Function{
+		Name:        "get_current_weather",
+		Description: "get current temperature (celcius) for provided coordinates. example {latitude: :-6.9218457, longitude:107.6070833}",
+		Parameters: agent.ParameterSchema{
+			Type: agent.Parameter_Type_Object,
+			Properties: map[string]agent.ParameterDefinition{
+				"latitude": {
+					Type: "float",
+				},
+				"longitude": {
+					Type: "float",
+				},
+			},
+			Required: []string{"latitude", "longitude"},
+		},
+	},
+}
+
+func init() {
+	tooldef.Register(Namespace, NewWeatherTool)
+}
+
+var _ agent.XTool = (*WeatherTool)(nil)
 
 type WeatherTool struct {
 	// ctx    context.Context
@@ -23,7 +51,7 @@ type WeatherTool struct {
 	endpoint string
 }
 
-func NewTooldef(cfg tooldef.Config) tooldef.Provider {
+func NewWeatherTool(cfg tooldef.Config) agent.ToolProvider {
 	urlEndpoint, _ := strings.CutSuffix(cfg.Endpoint, "/")
 	wt := WeatherTool{
 		// ctx:    ctx,
@@ -33,7 +61,11 @@ func NewTooldef(cfg tooldef.Config) tooldef.Provider {
 	return &wt
 }
 
-func (wt *WeatherTool) Ping(ctx context.Context) (bool, error) {
+func (wt *WeatherTool) Def() agent.Tool {
+	return definition
+}
+
+func (wt *WeatherTool) Ping(ctx context.Context) error {
 	// endpoint := fmt.Sprintf("%s/v1/forecast", wt.endpoint)
 	// resp, err := wt.client.Get(endpoint)
 	// if err != nil {
@@ -43,7 +75,7 @@ func (wt *WeatherTool) Ping(ctx context.Context) (bool, error) {
 	// 	return false, nil
 	// }
 	// defer resp.Body.Close()
-	return true, nil
+	return nil
 
 }
 
@@ -111,46 +143,41 @@ func (wt *WeatherTool) GetCurrentWeather(ctx context.Context, lat, long float64)
 	return &mr.Current, nil
 }
 
-func (wt *WeatherTool) Callback(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
-	param := struct {
-		Latitude  float64 `json:"latitude"`
-		Longitude float64 `json:"longitude"`
-	}{}
-	if err := json.Unmarshal([]byte(fc.Arguments), &param); err != nil {
+type weatherRequest struct {
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+}
+
+func (wr weatherRequest) validate() error {
+	if wr.Latitude == nil {
+		return fmt.Errorf("latitude cannot be empty")
+	}
+	if wr.Longitude == nil {
+		return fmt.Errorf("longitude cannot be empty")
+	}
+	return nil
+}
+
+func (wt *WeatherTool) Call(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
+	var req weatherRequest
+	if err := json.Unmarshal([]byte(fc.Arguments), &req); err != nil {
 		return nil, err
 	}
-	if param.Latitude == 0 || param.Longitude == 0 {
-		return nil, fmt.Errorf("latitude or longitude cannot be empty")
+	if err := req.validate(); err != nil {
+		return &agent.ToolResponse{
+			Name: fc.Name,
+			Output: map[string]any{
+				"error": err,
+			},
+		}, nil
 	}
 
-	curr, err := wt.GetCurrentWeather(ctx, param.Latitude, param.Longitude)
+	curr, err := wt.GetCurrentWeather(ctx, *req.Latitude, *req.Longitude)
 	if err != nil {
 		return nil, err
 	}
-	return &agent.ToolResponse{Output: map[string]any{"temperature": curr.Temp2m}}, nil
-}
-
-func (wt *WeatherTool) Tooling() agent.Tool {
-	t := agent.Tool{
-		Type: "function",
-		Function: agent.Function{
-			Name:        "get_current_weather",
-			Description: "get current temperature (celcius) for provided coordinates. example {latitude: :-6.9218457, longitude:107.6070833}",
-			Parameters: agent.ParameterSchema{
-				Type: agent.Parameter_Type_Object,
-				Properties: map[string]agent.ParameterDefinition{
-					"latitude": {
-						Type: "float",
-					},
-					"longitude": {
-						Type: "float",
-					},
-				},
-				Required: []string{"latitude", "longitude"},
-			},
-		},
-	}
-
-	t.SetCallback(wt.Callback)
-	return t
+	return &agent.ToolResponse{
+		Name:   fc.Name,
+		Output: map[string]any{"temperature": curr.Temp2m},
+	}, nil
 }
