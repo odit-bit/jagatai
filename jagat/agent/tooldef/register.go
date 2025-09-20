@@ -14,17 +14,19 @@ import (
 // configuration for 3rd party tool implementation
 type Config struct {
 	//name of tools that Register function use for discover
-	Name        string
+	Name string
 	//connection string for external call
-	Endpoint    string
+	Endpoint string
 	//secret or api key for tool
-	ApiKey      string
+	ApiKey string
 	//set true if tool need to make ping when it's build.
 	//see agent.ToolProvider for interface.
 	DisablePing bool
+	//extra option that tool provider may need.
+	Options map[string]any
 }
 
-type ProviderConstructFunc func(cfg Config) agent.ToolProvider
+type ProviderConstructFunc func(cfg Config) (agent.ToolProvider, error)
 
 var providers = make(map[string]ProviderConstructFunc)
 
@@ -49,6 +51,7 @@ func Count() int {
 }
 
 func Build(ctx context.Context, cfgs []Config) ([]agent.ToolProvider, error) {
+
 	//temporary list provider
 	type providerToBuild struct {
 		provider agent.ToolProvider
@@ -57,16 +60,24 @@ func Build(ctx context.Context, cfgs []Config) ([]agent.ToolProvider, error) {
 	toBuild := []providerToBuild{}
 
 	// --- Critical Section Start ---
-	dmutex.RLock() // Use a Read Lock since we are only reading the map.
+
 	for _, cfg := range cfgs {
 		if fn, ok := providers[cfg.Name]; ok {
-			p := fn(cfg)
+
+			// if cfg.Name == "tavily" {
+			// 	log.Println(cfg)
+			// }
+
+			p, err := fn(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("tool_provider err: %w", err)
+			}
 			toBuild = append(toBuild, providerToBuild{provider: p, config: cfg})
 		} else {
-			slog.Warn("tool provider initated but not available, forget to register ?")
+			slog.Warn("tool provider initiated but not available, forget to register ?")
 		}
 	}
-	dmutex.RUnlock()
+
 	// --- Critical Section End --- Lock is now released.
 
 	t := []agent.ToolProvider{}

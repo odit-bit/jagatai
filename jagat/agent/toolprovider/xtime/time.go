@@ -30,7 +30,7 @@ func (c *clock) Def() agent.Tool {
 	return c.def
 }
 
-func NewToolProvider(cfg tooldef.Config) agent.ToolProvider {
+func NewToolProvider(cfg tooldef.Config) (agent.ToolProvider, error) {
 	t := agent.Tool{
 		Type: "function",
 		Function: agent.Function{
@@ -51,7 +51,7 @@ func NewToolProvider(cfg tooldef.Config) agent.ToolProvider {
 
 	return &clock{
 		def: t,
-	}
+	}, nil
 }
 
 func (o *clock) Call(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {

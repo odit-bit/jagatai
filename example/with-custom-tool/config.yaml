@@ -1,0 +1,21 @@
+﻿server:
+  address: "localhost:11823" #default server address listening to
+  debug: true # log level debug
+
+provider: # llm backend
+  name: "genai" # ollama, openai
+  model: "gemini-2.5-flash-lite" # with ollama, it's better use bigger model (>4b) since it have good or better reasoning.
+  apikey: "" # use env 'JAGATAI_PROVIDER_APIKEY' variables for secrets.
+  extra:
+    topP:
+    topK:
+    minP:
+    temperature: 1
+    #
+#
+
+tools:
+  - name: "clock" # An existing tool
+  - name: "openstreetmap" # Your new tool
+    endpoint: # hardcoded
+    apikey: "${MY_TOOL_API_KEY}" # You can use env variables for secrets.

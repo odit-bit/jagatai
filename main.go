@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/odit-bit/jagatai/cmd"
 	"github.com/spf13/cobra"
 )
@@ -8,9 +10,11 @@ import (
 func main() {
 	rootCMD := cobra.Command{}
 	rootCMD.AddCommand(
-		&cmd.ServerCMD, 
-		&cmd.CliCompletionCMD, 
+		&cmd.ServerCMD,
 		&cmd.TeleCMD,
+		&cmd.CliCompletionCMD,
 	)
-	rootCMD.Execute()
+	if err := rootCMD.Execute(); err != nil {
+		log.Println(err)
+	}
 }

@@ -5,51 +5,16 @@
 provider: # llm backend
   name: "ollama"
   model: "qwen3:1.7b" #Default
-  key: ""
+  apikey: "" # JAGATAI_PROVIDER_APIKEY
   extra:
-    # endpoint: "http://127.0.0.1:11434" #ollama default
-    # topP: 0.98
-    # topK: 40
-    # minP: 0.02
-    # temperature: 0.8
-#
+    endpoint: #custom endpoint ollama only
+    topP:
+    topK:
+    minP:
+    temperature:
+
 tools:
+  - name: "clock"
+  - name: "osm"
   - name: "openmeteo"
     endpoint: "https://api.open-meteo.com"
-    apikey: ""
-  - name: "clock"
-    endpoint: ""
-    apikey: ""
-  - name: "osm"
-  - name: "tavily"
-    apikey: ""
-
-#
-#
-#
-# graph:
-#   entrypoint: "" # The name of the node to start
-#   nodes:
-#     - name: "node-1"
-#       type: ""
-#       config:
-#         connection_string: "" # postgres://user:pass@host:port/db
-#       edges:
-#         - target: "agent" # After this node runs, always go to the "agent" node.
-
-#     - name: "agent"
-#       type: "agent_router" # built-in type
-#       config:
-#       edges:
-#         #conditional routing
-#         - condition: "TOOL_CALL"
-#           target: "tool_executor"
-#         - condition: "END"
-#           target: "end"
-
-#     - name: "tool_executor"
-#       type: "tool_executor"
-#       config: {}
-#       edges:
-#         # target any tool runs
-#         - target: "agent"

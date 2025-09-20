@@ -9,14 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// func Test_load(t *testing.T) {
-// 	c, err := LoadAndValidate(FlagSet)
-// 	require.NoError(t, err)
-// 	assert.Equal(t, false, c.Server.Debug)
-// }
-
 // =============================================================================
-// Tests for the OLD LoadAndValidate function (with parameter)
+// Tests for LoadAndValidate function
 // =============================================================================
 
 // Helper function to create a new FlagSet for isolated tests
@@ -61,13 +55,15 @@ func TestLoadAndValidate_Old(t *testing.T) {
 		// Set environment variables
 		t.Setenv("JAGATAI_PROVIDER_NAME", "openai")
 		t.Setenv("JAGATAI_SERVER_DEBUG", "true")
+		t.Setenv("JAGATAI_PROVIDER_APIKEY", "apikey_value")
 
 		flags := newTestFlagSet()
 		cfg, err := LoadAndValidate(flags)
 
 		require.NoError(t, err)
-		assert.Equal(t, "openai", cfg.Provider.Name) // Overridden by env
-		assert.True(t, cfg.Server.Debug)             // Overridden by env
+		assert.Equal(t, "openai", cfg.Provider.Name)         // Overridden by env
+		assert.Equal(t, "apikey_value", cfg.Provider.ApiKey) // Overridden by env
+		assert.True(t, cfg.Server.Debug)                     // Overridden by env
 	})
 
 	// --- Test Case 4: Flag overrides both env var and config file ---

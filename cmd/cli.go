@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"bufio"
+	"context"
 	"fmt"
+	"os"
 
 	"github.com/odit-bit/jagatai/api"
 	"github.com/spf13/cobra"
@@ -17,23 +20,62 @@ var (
 
 var CliCompletionCMD = cobra.Command{
 	Use:  "chat args1",
-	Args: cobra.ExactArgs(1),
+	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		c := api.NewClient(GlobEndpoint, "")
+		// c := api.NewClient(GlobEndpoint, "")
+		// res, err := c.Chat(
+		// 	cmd.Context(),
+		// 	api.ChatRequest{
+		// 		Content: []*api.Message{
+		// 			api.NewTextMessage("user", args[0]),
+		// 		},
+		// 	})
+
+		// if err != nil {
+		// 	fmt.Printf("> %s", err)
+		// 	return nil
+		// }
+
+		// fmt.Printf("> %s", res.Text)
+		// return nil
+
+		start(cmd.Context())
+
+		return nil
+	},
+}
+
+func start(ctx context.Context) {
+	c := api.NewClient(GlobEndpoint, "")
+	scanner := bufio.NewScanner(os.Stdin)
+	session := session{}
+
+	for scanner.Scan() {
+		input := scanner.Text()
+		switch input {
+		case "/exit":
+			return
+		}
+		session.history = append(session.history, api.NewTextMessage("user", input))
+
 		res, err := c.Chat(
-			cmd.Context(),
+			ctx,
 			api.ChatRequest{
-				Content: []*api.Message{
-					api.NewTextMessage("user", args[0]),
-				},
+				Content: session.history,
 			})
 
 		if err != nil {
-			return err
+			fmt.Printf(">error: %s \n", err)
+			return
 		}
 
-		fmt.Printf("> %s", res.Text)
-		return nil
-	},
+		fmt.Printf(">model: %s \n", res.Text)
+		session.history = append(session.history, api.NewTextMessage("assistant", res.Text))
+	}
+
+}
+
+type session struct {
+	history []*api.Message
 }

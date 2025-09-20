@@ -1,5 +1,58 @@
 package tavily
 
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/odit-bit/jagatai/jagat/agent/tooldef"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func Test_consturct_tavily(t *testing.T) {
+	t.Setenv(ENV_API_KEY, "12345")
+	var tav *Tavily
+
+	tav, err := New(tooldef.Config{})
+	require.NoError(t, err)
+
+	assert.Equal(t, "12345", tav.key)
+	t.Cleanup(func() {
+		t.Setenv(ENV_API_KEY, "")
+	})
+
+	// ---
+
+	cfg := tooldef.Config{
+		Options: map[string]any{
+			mapApikey: "12345",
+		},
+	}
+	tav, err = New(cfg)
+	require.NoError(t, err)
+	assert.Equal(t, definition, tav.Def())
+	assert.Equal(t, cfg.Options[mapApikey], tav.key)
+}
+
+func Test_request(t *testing.T) {
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(mockResponse)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	tav, err := New(tooldef.Config{ApiKey: "12345", Endpoint: ts.URL})
+	require.NoError(t, err)
+
+	qr, err := tav.search(t.Context(), SearchParam{Query: "mock"})
+	require.NoError(t, err)
+	assert.Equal(t, mockResponse, *qr)
+}
+
 var mockResponse = QueryResponse{
 	Query:  "today news in jakarta",
 	Answer: "",

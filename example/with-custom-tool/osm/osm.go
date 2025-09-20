@@ -1,4 +1,4 @@
-package openstreetmap
+package osm
 
 import (
 	"context"
@@ -11,8 +11,17 @@ import (
 	"github.com/odit-bit/jagatai/jagat/agent/tooldef"
 )
 
+// Define the environment variable key.
+// in this case we don't need api key
+// const ENV_API_KEY = "JAGATAI_TOOLS_MYTOOL_APIKEY"
+
+const (
+	//then  name will use later tooldef.Build() to mapping the right config for tools.
+	namespace = "openstreetmap"
+)
+
 func init() {
-	tooldef.Register("osm", NewTooldef)
+	tooldef.Register(namespace, New)
 }
 
 type toolDefinition struct {
@@ -98,7 +107,7 @@ type toolProvider struct {
 	agent.XTool
 }
 
-func NewTooldef(cft tooldef.Config) (agent.ToolProvider, error) {
+func New(cft tooldef.Config) (agent.ToolProvider, error) {
 	provider := &OsmTool{
 		cli: http.DefaultClient,
 	}

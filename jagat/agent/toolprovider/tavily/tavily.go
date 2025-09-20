@@ -7,13 +7,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/odit-bit/jagatai/jagat/agent"
 	"github.com/odit-bit/jagatai/jagat/agent/tooldef"
 )
 
+const (
+	default_url = "https://api.tavily.com"
+
+	ENV_API_KEY = "JAGATAI_TOOLS_TAVILY_APIKEY"
+
+	mapApikey = "apikey"
+)
+
 func init() {
-	tooldef.Register("tavily", New)
+	tooldef.Register("tavily", NewToolProvider)
 }
 
 var definition = agent.Tool{
@@ -45,25 +54,45 @@ var definition = agent.Tool{
 	//
 }
 
-var _ agent.XTool = (*tavily)(nil)
+var _ agent.XTool = (*Tavily)(nil)
 
-type tavily struct {
+type Tavily struct {
 	key  string
 	tool agent.Tool
+	url  string
 }
 
-func New(cfg tooldef.Config) agent.ToolProvider {
-	if cfg.ApiKey == "" {
-		panic("tavily api key is empty")
+func NewToolProvider(cfg tooldef.Config) (agent.ToolProvider, error) {
+	t, err := New(cfg)
+	return t, err
+}
+
+func New(cfg tooldef.Config) (*Tavily, error) {
+	key := cfg.ApiKey
+	if key == "" {
+		envKey := os.Getenv(ENV_API_KEY)
+		if envKey == "" {
+			mapKey, ok := cfg.Options[mapApikey].(string)
+			if mapKey == "" || !ok {
+				return nil, fmt.Errorf("tavily tool requires an 'apikey' string in its options field or %v env var", ENV_API_KEY)
+			}
+			envKey = mapKey
+		}
+		key = envKey
 	}
-	t := tavily{
-		key:  cfg.ApiKey,
+	urlString := cfg.Endpoint
+	if urlString == "" {
+		urlString = default_url
+	}
+
+	t := Tavily{
+		url:  urlString,
+		key:  key,
 		tool: definition,
 	}
-	return &t
+	return &t, nil
 }
-
-func (t *tavily) Def() agent.Tool {
+func (t *Tavily) Def() agent.Tool {
 	return t.tool
 }
 
@@ -113,7 +142,7 @@ type QueryResponse struct {
 }
 
 // Call implements agent.XTool.
-func (t *tavily) Call(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
+func (t *Tavily) Call(ctx context.Context, fc agent.FunctionCall) (*agent.ToolResponse, error) {
 
 	// send api request to tavilys
 
@@ -125,11 +154,10 @@ func (t *tavily) Call(ctx context.Context, fc agent.FunctionCall) (*agent.ToolRe
 		return nil, err
 	}
 
-	// qp, err := t.search(ctx, sp)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	qp := mockResponse
+	qp, err := t.search(ctx, sp)
+	if err != nil {
+		return nil, err
+	}
 
 	return &agent.ToolResponse{Name: fc.Name, Output: map[string]any{
 		"query":  qp.Query,
@@ -138,19 +166,20 @@ func (t *tavily) Call(ctx context.Context, fc agent.FunctionCall) (*agent.ToolRe
 
 }
 
-func (t tavily) Ping(ctx context.Context) error {
+func (t Tavily) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (t *tavily) search(ctx context.Context, param SearchParam) (*QueryResponse, error) {
-	url := "https://api.tavily.com/search"
+func (t *Tavily) search(ctx context.Context, param SearchParam) (*QueryResponse, error) {
 
 	b, err := json.Marshal(param)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(b))
+	urlString := fmt.Sprintf("%s/%s", t.url, "search")
+
+	req, err := http.NewRequestWithContext(ctx, "POST", urlString, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}

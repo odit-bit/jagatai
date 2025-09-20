@@ -31,21 +31,6 @@ var ServerCMD = cobra.Command{
 			return fmt.Errorf("invalid configuration: %w", err)
 		}
 
-		// // Handle shutdown properly so nothing leaks.
-		// otelShutdown, err := setupOtel(ctx)
-		// if err != nil {
-		// 	logger.Error(err.Error())
-		// 	return err
-		// }
-		// defer func() {
-		// 	err = errors.Join(err, otelShutdown(context.Background()))
-		// }()
-		// reg, err := updateRAMUsage()
-		// if err != nil {
-		// 	return err
-		// }
-		// defer reg.Unregister()
-
 		a, err := jagat.New(ctx, cfg)
 		if err != nil {
 			return err

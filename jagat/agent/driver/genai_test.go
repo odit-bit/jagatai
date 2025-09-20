@@ -13,7 +13,7 @@ import (
 )
 
 func Test_genai(t *testing.T) {
-	tool := xtime.NewToolProvider(tooldef.Config{})
+	tool, _ := xtime.NewToolProvider(tooldef.Config{})
 	def := tool.Def()
 	fd := ToFunctionDeclaration(&def)
 

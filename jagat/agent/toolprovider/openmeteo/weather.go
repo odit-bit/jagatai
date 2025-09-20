@@ -51,14 +51,14 @@ type WeatherTool struct {
 	endpoint string
 }
 
-func NewWeatherTool(cfg tooldef.Config) agent.ToolProvider {
+func NewWeatherTool(cfg tooldef.Config) (agent.ToolProvider, error) {
 	urlEndpoint, _ := strings.CutSuffix(cfg.Endpoint, "/")
 	wt := WeatherTool{
 		// ctx:    ctx,
 		client:   http.DefaultClient,
 		endpoint: urlEndpoint,
 	}
-	return &wt
+	return &wt,nil
 }
 
 func (wt *WeatherTool) Def() agent.Tool {

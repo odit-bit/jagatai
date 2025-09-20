@@ -30,10 +30,6 @@ func (cr *ChatRequest) validate() error {
 		return fmt.Errorf("messages cannot be nil")
 	}
 	for _, msg := range cr.Content {
-		// fmt.Println(msg.Role)
-		// for _, p := range msg.Parts {
-		// 	fmt.Println(p)
-		// }
 		if len(msg.Parts) == 0 {
 			return fmt.Errorf("some message has no parts")
 		}
