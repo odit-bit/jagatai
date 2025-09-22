@@ -10,6 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/odit-bit/jagatai/jagat/agent"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -41,6 +42,28 @@ func RestHandler(ctx context.Context, a Agent, e *echo.Echo) {
 	if e == nil {
 		panic("got nil parameter")
 	}
+
+	meter := otel.Meter("jagat.rest")
+	requestCounter, err := meter.Int64Counter(
+		"jagat.http.request_total",
+		metric.WithDescription("total number of HTTP request"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// otel middleware
+	e.Use(otelecho.Middleware("jagat-server"))
+
+	//custom middleware to counter request
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			err := next(c)
+			requestCounter.Add(c.Request().Context(), 1)
+			return err
+		}
+	})
+
 	e.POST("/v1/chat/completions", func(c echo.Context) error {
 		slog.Debug("got request")
 		if ok := IsJsonContentType(c.Request()); !ok {

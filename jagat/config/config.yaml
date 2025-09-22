@@ -18,3 +18,10 @@ tools:
   - name: "osm"
   - name: "openmeteo"
     endpoint: "https://api.open-meteo.com"
+
+observability:
+  enable: false
+  exporter: "stdout" # stdout or jaeger
+  traceendpoint: ""
+  metricendpoint: ""
+  secure: false

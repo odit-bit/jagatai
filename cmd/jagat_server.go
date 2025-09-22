@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/odit-bit/jagatai/jagat"
 	"github.com/odit-bit/jagatai/jagat/config"
+	"github.com/odit-bit/jagatai/jagat/observability"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,10 @@ var ServerCMD = cobra.Command{
 			return fmt.Errorf("invalid configuration: %w", err)
 		}
 
+		// otel
+		// Initialize observability
+		shutdown := observability.Init(ctx, "jagat-server", cfg.Observe)
+		defer shutdown(ctx) // Ensure shutdown is called on exit
 		a, err := jagat.New(ctx, cfg)
 		if err != nil {
 			return err

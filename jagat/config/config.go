@@ -12,6 +12,7 @@ import (
 
 	"github.com/odit-bit/jagatai/jagat/agent/driver"
 	"github.com/odit-bit/jagatai/jagat/agent/tooldef"
+	"github.com/odit-bit/jagatai/jagat/observability"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -21,9 +22,10 @@ var defaultConfig embed.FS
 
 // holds aggregats configuration across jagat environment.
 type Config struct {
-	Server   ServerConfig     `yaml:"server"`
-	Provider Provider         `yaml:"provider"`
-	Tools    []tooldef.Config `yaml:"tools"`
+	Server   ServerConfig         `yaml:"server"`
+	Provider Provider             `yaml:"provider"`
+	Tools    []tooldef.Config     `yaml:"tools"`
+	Observe  observability.Config `yaml:"observability"`
 }
 
 // jagat server config

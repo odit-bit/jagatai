@@ -4,7 +4,31 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
+
+var (
+	tracer      = otel.Tracer("jagat.agent.graph")
+	meter       = otel.Meter("jagat.agent.graph")
+	toolCounter metric.Int64Counter
+)
+
+// We use it here to create our counter metric so it's ready when needed.
+func init() {
+	var err error
+	toolCounter, err = meter.Int64Counter(
+		"agent.tool.calls",
+		metric.WithDescription("Counts the number of tool calls."),
+		metric.WithUnit("{call}"),
+	)
+	if err != nil {
+		// If we can't create the metric, the application can't start correctly.
+		panic(err)
+	}
+}
 
 // represent state that exchange between node.
 type State struct {
@@ -83,6 +107,12 @@ func (tn *ToolNode) Name() string {
 }
 
 func (tn *ToolNode) Execute(ctx context.Context, state State) (string, State, error) {
+	//start new span
+	ctx, span := tracer.Start(ctx, "ToolNode.Execute")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("tool.name", tn.Name()))
+
 	lastMsg := state.Message[len(state.Message)-1]
 
 	var toolResp *ToolResponse
@@ -95,6 +125,8 @@ func (tn *ToolNode) Execute(ctx context.Context, state State) (string, State, er
 	if tc.Function.Name != tn.Name() {
 		return "", state, fmt.Errorf("routing error, expected tool call for '%s', but got '%s'", tn.Name(), tc.Function.Name)
 	}
+
+	toolCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("tool.name", tn.Name())))
 
 	toolResp, err = tn.tp.Call(ctx, tc.Function)
 	if err != nil {
@@ -130,6 +162,9 @@ func (an *AgentNode) Name() string {
 }
 
 func (an *AgentNode) Execute(ctx context.Context, state State) (string, State, error) {
+	ctx, span := tracer.Start(ctx, "AgentNode.Execute")
+	defer span.End()
+
 	resp, err := an.provider.Chat(ctx, CCReq{
 		Messages: state.Message,
 		Tools:    an.tools,
