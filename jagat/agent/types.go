@@ -86,12 +86,12 @@ type Blob struct {
 
 // ChatCompletionResponse present result receive from provider
 type CCRes struct {
-	ID      string    `json:"id"`
-	Model   string    `json:"model"`
-	Object  string    `json:"object"`
-	Created time.Time `json:"created"`
+	ID      string
+	Model   string
+	Object  string
+	Created time.Time
 	//if supported and configured, the provider could response more than one choice, but in this implementation, agent always use choices[0]
-	Choices []Choice `json:"choices"`
+	Choices []Choice
 	Usage   Usage
 }
 
@@ -108,11 +108,10 @@ func (res *CCRes) IsToolCall() ([]*ToolCall, bool) {
 
 // choice represent single response from provider.
 type Choice struct {
-	Index        int         `json:"index"`
-	Text         string      `json:"text"`
-	ToolCalls    []*ToolCall `json:"tool_calls,omitempty"`
-	FinishReason string      `json:"finish_reason"`
-	Delta        Message     `json:"delta"`
+	Index        int
+	Text         string
+	ToolCalls    []*ToolCall
+	FinishReason string
 }
 
 type Usage struct {

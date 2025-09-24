@@ -5,7 +5,7 @@ Jagat is ready to use AI agents server. It is designed to be stateless and exten
 ## Core Features
 
 - **Stateless by Design**: The agent does not manage conversation history; the client is responsible for sending the full message history with each request.
-- **Pluggable LLM Providers**: Supports multiple LLM backends, including Ollama, OpenAI, and Google Gemini. The provider can be configured in the `config.yaml` file.
+- **Pluggable LLM Providers**: Supports Ollama, Google Gemini. The provider can be configured in the `config.yaml` file.
 - **Extensible Tool System**: New functionalities can be added by creating custom tools. The agent uses a registration mechanism to discover and integrate these tools at runtime.
 - **Graph-Based Execution(in-progress)**: Manages the conversation flow and tool usage through a graph of executable nodes, allowing for more complex and controlled interactions.
 - **Flexible Configuration**: Configuration is handled through a `config.yaml` file, with overrides possible via environment variables and command-line flags.

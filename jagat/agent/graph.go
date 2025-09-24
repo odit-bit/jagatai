@@ -135,7 +135,7 @@ func (tn *ToolNode) Execute(ctx context.Context, state State) (string, State, er
 			Output: map[string]any{"error": err.Error()},
 		}
 	}
-	slog.Debug("graph_nodes_tool", "tool", toolResp)
+	slog.Debug("graph_nodes_tool", "response", toolResp)
 
 	if toolResp == nil {
 		return "", state, fmt.Errorf("tool response is empty '%s'", tn.Name())

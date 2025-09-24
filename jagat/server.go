@@ -33,8 +33,8 @@ func New(ctx context.Context, cfg *config.Config) (*jagat, error) {
 	switch cfg.Provider.Name {
 	case "ollama":
 		provider, err = driver.NewOllamaAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Extra)
-	case "openai":
-		provider, err = driver.NewOpenAIAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Extra)
+	// case "openai":
+	// 	provider, err = driver.NewOpenAIAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Extra)
 	case "genai":
 		provider, err = driver.NewGeminiAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Extra)
 

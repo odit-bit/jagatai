@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -96,6 +97,11 @@ type ToolResponse struct {
 	Name string
 	// Tool response
 	Output map[string]any
+}
+
+func (tr ToolResponse) String() string {
+	b, _ := json.MarshalIndent(tr, " ", "")
+	return string(b)
 }
 
 // FunctionCall holds the function name and its raw arguments.

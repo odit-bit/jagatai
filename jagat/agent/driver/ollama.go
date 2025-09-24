@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -41,8 +42,9 @@ func NewOllamaAdapter(model string, key string, config *Config) (*OllamaAPI, err
 	}
 	cli := ollama.NewClient(oUrl, http.DefaultClient)
 	oa := OllamaAPI{
-		c:    cli,
-		conf: config,
+		model: model,
+		c:     cli,
+		conf:  config,
 	}
 	return &oa, err
 }
@@ -86,8 +88,10 @@ func (oapi *OllamaAPI) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes,
 	err := oapi.c.Chat(ctx, oReq, func(cr ollama.ChatResponse) error {
 		tcs := []*agent.ToolCall{}
 		for _, tc := range cr.Message.ToolCalls {
+			log.Println("GOT TOOLCALLS", tc)
+
 			tcs = append(tcs, &agent.ToolCall{
-				ID:   "",
+				ID:   tc.Function.Name,
 				Type: tc.Function.Name,
 				Function: agent.FunctionCall{
 					Name:      tc.Function.Name,
@@ -111,20 +115,10 @@ func (oapi *OllamaAPI) Chat(ctx context.Context, req agent.CCReq) (*agent.CCRes,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ollama adapter: %w", err)
 	}
 	return resp, nil
 
-}
-
-func (oapi *OllamaAPI) ChatGen(ctx context.Context) (any, error) {
-	if err := oapi.c.Chat(ctx, &ollama.ChatRequest{}, func(cr ollama.ChatResponse) error {
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return nil, fmt.Errorf("not implemented")
 }
 
 // Transform takes a ToolA and produces the equivalent ToolB.
