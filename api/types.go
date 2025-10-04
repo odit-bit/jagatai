@@ -44,7 +44,7 @@ func NewBlobMessage(Role string, b []byte, mimeType string) *Message {
 	return &Message{
 		Role: "user",
 		Parts: []*agent.Part{
-			newBlobPart(b, mimeType),
+			NewBlobPart(b, mimeType),
 		},
 	}
 }
@@ -64,7 +64,7 @@ func NewTextPart(text string) *agent.Part {
 	}
 }
 
-func newBlobPart(b []byte, mime string) *agent.Part {
+func NewBlobPart(b []byte, mime string) *agent.Part {
 	return &agent.Part{
 		Blob: &agent.Blob{
 			Bytes: b,

@@ -145,6 +145,7 @@ func messageToContent(src *agent.Message, dst *genai.Content) error {
 		var err error
 		if p.Text != "" {
 			part = genai.NewPartFromText(p.Text)
+			
 		} else if p.Blob != nil {
 			part = genai.NewPartFromBytes(
 				p.Blob.Bytes,

@@ -46,6 +46,7 @@ func Handle(ctx context.Context, bot *tele.Bot, llmClient *api.Client, cache *Ch
 	bot.Handle(tele.OnPhoto, h.HandlePhoto)
 	bot.Handle(tele.OnLocation, h.HandleLoc)
 	bot.Handle(tele.OnDocument, h.HandleDoc)
+	bot.Handle(tele.OnAudio, h.HandleAudio)
 }
 
 type Handler struct {
@@ -54,8 +55,44 @@ type Handler struct {
 	cache *ChatCache
 }
 
+func (h *Handler) HandleAudio(ctx tele.Context) error {
+	audio := ctx.Message().Audio
+	caption := ctx.Message().Caption
+	slog.Debug("Audio", "caption:", caption, "mime:", audio.MIME)
+
+	f, err := ctx.Bot().File(&audio.File)
+	if err != nil {
+		slog.Error("failed to get audio from telegram", "error", err)
+		return ctx.Send("server error")
+	}
+	defer f.Close()
+
+	b, err := io.ReadAll(f)
+	if err != nil {
+		slog.Error("failed read audio binary", "error", err)
+		return ctx.Send("server error")
+	}
+
+	msg := api.Message{Role: "user"}
+	msg.Parts = append(msg.Parts, api.NewTextPart(caption))
+	msg.Parts = append(msg.Parts, api.NewBlobPart(b, audio.MIME))
+
+	resp, err := h.do(
+		h.ctx,
+		ctx.Message().Chat.ID,
+		&msg,
+	)
+	if err != nil {
+		slog.Error("failed generate content", "error", err)
+		return ctx.Send("server errror")
+	}
+	return ctx.Send(resp.Text)
+}
+
 func (h *Handler) HandleDoc(ctx tele.Context) error {
 	doc := ctx.Message().Document
+	caption := ctx.Message().Caption
+
 	if doc.MIME != "application/pdf" {
 		return ctx.Send("file only support pdf")
 	}
@@ -71,12 +108,14 @@ func (h *Handler) HandleDoc(ctx tele.Context) error {
 		slog.Error("failed read doc", "error", err)
 		return ctx.Send("server error")
 	}
-	msg := api.NewBlobMessage("user", b, doc.MIME)
+	msg := api.Message{Role: "user"}
+	msg.Parts = append(msg.Parts, api.NewTextPart(caption))
+	msg.Parts = append(msg.Parts, api.NewBlobPart(b, doc.MIME))
 
 	resp, err := h.do(
 		h.ctx,
 		ctx.Message().Chat.ID,
-		msg,
+		&msg,
 	)
 	if err != nil {
 		slog.Error("failed generate content", "error", err)
@@ -116,7 +155,7 @@ func (h *Handler) HandleLoc(ctx tele.Context) error {
 
 func (h *Handler) HandlePhoto(ctx tele.Context) error {
 	photo := ctx.Message().Photo
-
+	caption := ctx.Message().Caption
 	if photo.File.InCloud() {
 
 		// b, _ := json.MarshalIndent(photo, "", " ")
@@ -135,8 +174,12 @@ func (h *Handler) HandlePhoto(ctx tele.Context) error {
 		}
 		mime := http.DetectContentType(b)
 
-		msg := api.NewBlobMessage(photo.InputMedia().Caption, b, mime)
-		res, err := h.do(h.ctx, ctx.Chat().ID, msg)
+		// msg := api.NewBlobMessage(photo.InputMedia().Caption, b, mime)
+		msg := api.Message{Role: "user"}
+		msg.Parts = append(msg.Parts, api.NewTextPart(caption))
+		msg.Parts = append(msg.Parts, api.NewBlobPart(b, mime))
+
+		res, err := h.do(h.ctx, ctx.Chat().ID, &msg)
 		if err != nil {
 			slog.Error(err.Error())
 			return ctx.Send("error")
