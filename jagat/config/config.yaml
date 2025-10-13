@@ -1,5 +1,5 @@
 ﻿server:
-  address: "127.0.0.1:11823" #default server address listening to
+  address: "127.0.0.1:11823" #omit the host if need listen to all interface
   debug: false
 
 provider: # llm backend

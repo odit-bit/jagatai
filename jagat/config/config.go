@@ -76,9 +76,6 @@ func LoadAndValidate(flags *pflag.FlagSet) (*Config, error) {
 
 	// 4. Bind Pflags flags
 	for flagName, configKey := range flagToConfigKeyMap {
-		// if err := v.BindPFlag(configKey, flags.Lookup(flagName)); err != nil {
-		// 	return nil, fmt.Errorf("failed to bind flags %s:%w", flagName, err)
-		// }
 		v.BindPFlag(configKey, flags.Lookup(flagName))
 	}
 
