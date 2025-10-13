@@ -4,15 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/signal"
 
+	"github.com/labstack/echo/v4"
 	"github.com/odit-bit/jagatai/jagat/agent"
 	"github.com/odit-bit/jagatai/jagat/agent/driver"
 	"github.com/odit-bit/jagatai/jagat/agent/tooldef"
 	_ "github.com/odit-bit/jagatai/jagat/agent/toolprovider"
-	"github.com/odit-bit/jagatai/jagat/config"
+	"github.com/spf13/pflag"
 )
 
 type jagat struct {
+	address string
 	Agent
 }
 
@@ -20,7 +24,7 @@ type Agent interface {
 	Completion(ctx context.Context, msgs []*agent.Message) (*agent.Message, error)
 }
 
-func New(ctx context.Context, cfg *config.Config) (*jagat, error) {
+func new(ctx context.Context, cfg *Config) (*jagat, error) {
 	//logging
 	if cfg.Server.Debug {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
@@ -63,6 +67,55 @@ func New(ctx context.Context, cfg *config.Config) (*jagat, error) {
 	a := agent.New(provider, toolOpt)
 
 	return &jagat{
-		Agent: a,
+		Agent:   a,
+		address: cfg.Server.Address,
 	}, nil
+}
+
+func (j *jagat) Address() string {
+	return j.address
+}
+
+// create jagat instance from flags
+func NewPflags(ctx context.Context, flag *pflag.FlagSet) (*jagat, error) {
+	// config file
+	cfg, err := LoadAndValidate(flag)
+	if err != nil {
+		slog.Error("invalid configuration", "error", err)
+		return nil, fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	// otel
+	// Initialize observability
+	shutdown := InitObservability(ctx, "jagat-server", cfg.Observe)
+	defer shutdown(ctx) // Ensure shutdown is called on exit
+	a, err := new(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+func (j *jagat) Run(ctx context.Context) error {
+	// http server
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	defer stop()
+
+	e := echo.New()
+	RestHandler(ctx, j.Agent, e)
+
+	var err error
+	srvErr := make(chan error, 1)
+	go func() {
+		srvErr <- e.Start(j.address)
+	}()
+
+	select {
+	case err = <-srvErr:
+		return err
+	case <-ctx.Done():
+		stop()
+	}
+
+	return e.Shutdown(ctx)
 }

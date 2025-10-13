@@ -1,4 +1,4 @@
-package config
+package jagat
 
 import "github.com/spf13/pflag"
 

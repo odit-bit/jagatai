@@ -1,4 +1,4 @@
-package config
+package jagat
 
 import (
 	"bytes"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/odit-bit/jagatai/jagat/agent/driver"
 	"github.com/odit-bit/jagatai/jagat/agent/tooldef"
-	"github.com/odit-bit/jagatai/jagat/observability"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -22,10 +21,10 @@ var defaultConfig embed.FS
 
 // holds aggregats configuration across jagat environment.
 type Config struct {
-	Server   ServerConfig         `yaml:"server"`
-	Provider Provider             `yaml:"provider"`
-	Tools    []tooldef.Config     `yaml:"tools"`
-	Observe  observability.Config `yaml:"observability"`
+	Server   ServerConfig     `yaml:"server"`
+	Provider Provider         `yaml:"provider"`
+	Tools    []tooldef.Config `yaml:"tools"`
+	Observe  ObsConfig        `yaml:"observability"`
 }
 
 // jagat server config
@@ -41,6 +40,17 @@ type Provider struct {
 	ApiKey   string        `yaml:"apikey"`
 	Endpoint string        `yaml:"endpoint"`
 	Extra    driver.Config `yaml:"extra"`
+}
+
+type ObsConfig struct {
+	Enable bool
+	// if not set but enable will use stdout
+	Exporter string
+	// http endpoint exporter
+	TraceEndpoint   string
+	MetricsEndpoint string
+	// secure endpoint (https)
+	Secure bool
 }
 
 // Validate checks the configuration for correctness.
