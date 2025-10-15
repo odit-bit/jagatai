@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"log/slog"
 	"os"
 	"os/signal"
 
@@ -15,15 +16,31 @@ func init() {
 var ServerCMD = cobra.Command{
 	Use:  "server",
 	Args: cobra.ExactArgs(0),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt)
 		defer stop()
 
-		a, err := jagat.NewPflags(ctx, cmd.Flags())
+		// jagat config
+		cfg, err := jagat.LoadAndValidate(cmd.Flags())
 		if err != nil {
-			return err
+			slog.Error(err.Error())
+			// return err
 		}
 
-		return a.Run(ctx)
+		j, err := jagat.NewHttp(ctx, *cfg)
+		if err != nil {
+			slog.Error(err.Error())
+			// return err
+		}
+
+		go func() {
+			<-ctx.Done()
+			slog.Debug("received shutdown signal")
+		}()
+
+		if err := j.Start(); err != nil {
+			slog.Error(err.Error())
+		}
+
 	},
 }

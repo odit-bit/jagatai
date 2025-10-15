@@ -2,6 +2,7 @@ package jagat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -14,6 +15,65 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
+
+type Server struct {
+	e   *echo.Echo
+	cfg Config
+
+	ctx context.Context
+}
+
+func NewHttp(ctx context.Context, cfg Config) (Server, error) {
+
+	// jagat instance
+	j, err := New(ctx, &cfg)
+	if err != nil {
+		return Server{}, err
+	}
+
+	// http server
+	e := echo.New()
+
+	// http handler
+	RestHandler(ctx, j, e)
+
+	return Server{e: e, cfg: cfg, ctx: ctx}, nil
+}
+
+func (s *Server) Start() error {
+	var err error
+
+	// start observability
+	shutdown, err := InitObservability(s.ctx, "jagat-server", s.cfg.Observe)
+	if err != nil {
+		return fmt.Errorf("failed init obervability: %w", err)
+	}
+
+	// start echo
+	go func() {
+		<-s.ctx.Done()
+
+		// shutdown
+		slog.Info("shutdown observability providers...")
+
+		if xerr := errors.Join(err, shutdown(s.ctx)); err != nil {
+			err = errors.Join(err, xerr)
+		}
+
+		// Ensure shutdown is called on exit
+		slog.Info("shutdown http server...")
+		if xerr := s.e.Shutdown(s.ctx); err != nil {
+			err = errors.Join(err, xerr)
+		}
+
+	}()
+
+	if xerr := s.e.Start(s.cfg.Server.Address); !errors.Is(xerr, http.ErrServerClosed) {
+		err = errors.Join(err, xerr)
+		return err
+	}
+	return nil
+}
 
 // Request
 type ChatRequest struct {

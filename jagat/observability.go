@@ -3,6 +3,7 @@ package jagat
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"go.opentelemetry.io/otel"
@@ -19,11 +20,11 @@ import (
 
 // Initializes and configures OpenTelemetry for the application.
 // It returns a shutdown function that must be called on application exit.
-func InitObservability(ctx context.Context, serviceName string, cfg ObsConfig) (shutdown func(context.Context) error) {
+func InitObservability(ctx context.Context, serviceName string, cfg ObsConfig) (shutdown func(context.Context) error, err error) {
 	noopShutdown := func(context.Context) error { return nil }
 	if !cfg.Enable {
 		slog.Info("Observability is disabled")
-		return noopShutdown
+		return noopShutdown, nil
 	}
 
 	res, err := resource.New(
@@ -33,15 +34,15 @@ func InitObservability(ctx context.Context, serviceName string, cfg ObsConfig) (
 		),
 	)
 	if err != nil {
-		slog.Error("failed to create otel resource", "error", err)
-		return func(context.Context) error { return nil }
+		err = fmt.Errorf("failed to create otel resource: %w", err)
+		return func(context.Context) error { return nil }, err
 	}
 
 	// --- TRACER PROVIDER ---
 	var traceExporter trace.SpanExporter
 	switch cfg.Exporter {
 	case "http":
-		slog.Info("Initializing Jaeger exporter", "endpoint", cfg.TraceEndpoint)
+		slog.Debug("Initializing Jaeger exporter", "endpoint", cfg.TraceEndpoint)
 
 		//tracer option.
 		otlpOpts := []otlptracehttp.Option{}
@@ -52,16 +53,16 @@ func InitObservability(ctx context.Context, serviceName string, cfg ObsConfig) (
 		traceExporter, err = otlptracehttp.New(ctx, otlpOpts...)
 
 		if err != nil {
-			slog.Error("failed to create otlp http trace exporter ", "error", err)
-			return noopShutdown
+			err = fmt.Errorf("failed to create otlp http trace exporter: %w", err)
+			return noopShutdown, err
 		}
 
 	default:
 		slog.Info("Initializing stdout exporter")
 		traceExporter, err = stdouttrace.New(stdouttrace.WithPrettyPrint())
 		if err != nil {
-			slog.Error("failed to create trace exporter", "error", err)
-			return func(context.Context) error { return nil }
+			err = fmt.Errorf("failed to create trace exporter: %w", err)
+			return noopShutdown, err
 		}
 
 	}
@@ -85,15 +86,15 @@ func InitObservability(ctx context.Context, serviceName string, cfg ObsConfig) (
 		}
 		metricExporter, err = otlpmetrichttp.New(ctx, opts...)
 		if err != nil {
-			slog.Error("failed to create otlp http metric exporter", "error", err)
-			return noopShutdown
+			err = fmt.Errorf("failed to create otlp http metric exporter: %w", err)
+			return noopShutdown, err
 		}
 
 	default:
 		metricExporter, err = stdoutmetric.New()
 		if err != nil {
-			slog.Error("failed to create metric exporter", "error", err)
-			return func(context.Context) error { return nil }
+			err = fmt.Errorf("failed to create metric exporter: %w", err)
+			return noopShutdown, err
 		}
 	}
 
@@ -110,7 +111,6 @@ func InitObservability(ctx context.Context, serviceName string, cfg ObsConfig) (
 	// The returned shutdown function will be called on application exit
 	// to ensure all telemetry data is flushed.
 	return func(ctx context.Context) error {
-		slog.Info("Shutting down observability providers...")
 		var shutdownErr error
 		if err := tracerProvider.Shutdown(ctx); err != nil {
 			shutdownErr = errors.Join(shutdownErr, err)
@@ -119,5 +119,5 @@ func InitObservability(ctx context.Context, serviceName string, cfg ObsConfig) (
 			shutdownErr = errors.Join(shutdownErr, err)
 		}
 		return shutdownErr
-	}
+	}, nil
 }
