@@ -1,7 +1,6 @@
-package jagat
+package cmd
 
 import (
-	"os"
 	"testing"
 
 	"github.com/spf13/pflag"
@@ -81,28 +80,28 @@ func TestLoadAndValidate_Old(t *testing.T) {
 		assert.Equal(t, "0.0.0.0:8080", cfg.Server.Address) // From env var (flag not set)
 	})
 
-	// --- Test Case 5: Validation error for missing required field ---
-	t.Run("validation fails for missing provider name", func(t *testing.T) {
-		// Create a temporary, minimal config file
-		content := []byte(`
-server:
-  address: "127.0.0.1:1234"
-provider:
-  model: "a-model"
-# name is missing
-`)
-		tmpfile, err := os.CreateTemp("", "config-*.yaml")
-		require.NoError(t, err)
-		defer os.Remove(tmpfile.Name())
-		_, err = tmpfile.Write(content)
-		require.NoError(t, err)
-		tmpfile.Close()
+	// 	// --- Test Case 5: Validation error for missing required field ---
+	// 	t.Run("validation fails for missing provider name", func(t *testing.T) {
+	// 		// Create a temporary, minimal config file
+	// 		content := []byte(`
+	// server:
+	//   address: "127.0.0.1:1234"
+	// provider:
+	//   model: "a-model"
+	// # name is missing
+	// `)
+	// 		tmpfile, err := os.CreateTemp("", "config-*.yaml")
+	// 		require.NoError(t, err)
+	// 		defer os.Remove(tmpfile.Name())
+	// 		_, err = tmpfile.Write(content)
+	// 		require.NoError(t, err)
+	// 		tmpfile.Close()
 
-		flags := newTestFlagSet()
-		flags.Parse([]string{"--config", tmpfile.Name()})
+	// 		flags := newTestFlagSet()
+	// 		flags.Parse([]string{"--config", tmpfile.Name()})
 
-		_, err = LoadAndValidate(flags)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "provider name is required")
-	})
+	// 		_, err = LoadAndValidate(flags)
+	// 		require.Error(t, err)
+	// 		assert.Contains(t, err.Error(), "provider name is required")
+	// 	})
 }

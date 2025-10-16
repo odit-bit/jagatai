@@ -12,7 +12,6 @@ import (
 )
 
 type jagat struct {
-	// address string
 	Agent
 }
 
@@ -21,22 +20,28 @@ type Agent interface {
 }
 
 func New(ctx context.Context, cfg *Config) (*jagat, error) {
+	// Validate the final config
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+
 	//logging
 	if cfg.Server.Debug {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 		slog.Debug("configuration", "config", cfg)
 	}
-	// provider
+
+	// llm provider
 	var provider agent.Provider
 	var err error
 
 	switch cfg.Provider.Name {
+
 	case "ollama":
-		provider, err = driver.NewOllamaAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Extra)
-	// case "openai":
-	// 	provider, err = driver.NewOpenAIAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Extra)
+		provider, err = driver.NewOllamaAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Options)
+
 	case "genai":
-		provider, err = driver.NewGeminiAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Extra)
+		provider, err = driver.NewGeminiAdapter(cfg.Provider.Model, cfg.Provider.ApiKey, &cfg.Provider.Options)
 
 	default:
 		err = fmt.Errorf("unknown provider specified in config: %s", cfg.Provider.Name)
@@ -64,26 +69,5 @@ func New(ctx context.Context, cfg *Config) (*jagat, error) {
 
 	return &jagat{
 		Agent: a,
-		// address: cfg.Server.Address,
 	}, nil
 }
-
-// // create jagat instance from flags
-// func NewPflags(ctx context.Context, flag *pflag.FlagSet) (*jagat, error) {
-// 	// config file
-// 	cfg, err := LoadAndValidate(flag)
-// 	if err != nil {
-// 		slog.Error("invalid configuration", "error", err)
-// 		return nil, fmt.Errorf("invalid configuration: %w", err)
-// 	}
-
-// 	// otel
-// 	// Initialize observability
-// 	shutdown := InitObservability(ctx, "jagat-server", cfg.Observe)
-// 	defer shutdown(ctx) // Ensure shutdown is called on exit
-// 	a, err := New(ctx, cfg)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return a, nil
-// }

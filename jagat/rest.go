@@ -131,7 +131,6 @@ func RestHandler(ctx context.Context, a Agent, e *echo.Echo) {
 		}
 
 		var input ChatRequest
-		// input := map[string]any{}
 		if err := c.Bind(&input); err != nil {
 			slog.Error("failed binding", "error", err, "type", input)
 			return c.JSON(400, echo.Map{"error": "bad json format"})

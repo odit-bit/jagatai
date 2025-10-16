@@ -6,7 +6,7 @@ provider: # llm backend
   name: "ollama"
   model: "qwen3:1.7b" #Default
   apikey: "" # JAGATAI_PROVIDER_APIKEY
-  extra:
+  options:
     endpoint: #custom endpoint ollama only
     topP:
     topK:
