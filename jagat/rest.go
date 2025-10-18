@@ -44,7 +44,7 @@ func (s *Server) Start() error {
 	var err error
 
 	// start observability
-	shutdown, err := InitObservability(s.ctx, "jagat-server", s.cfg.Observe)
+	shutdown, err := InitObservability(s.ctx, "jagat-server", s.cfg)
 	if err != nil {
 		return fmt.Errorf("failed init obervability: %w", err)
 	}
@@ -54,9 +54,9 @@ func (s *Server) Start() error {
 		<-s.ctx.Done()
 
 		// shutdown
-		slog.Info("shutdown observability providers...")
 
-		if xerr := errors.Join(err, shutdown(s.ctx)); err != nil {
+		slog.Info("shutdown observability exporter...")
+		if xerr := shutdown(s.ctx); err != nil {
 			err = errors.Join(err, xerr)
 		}
 

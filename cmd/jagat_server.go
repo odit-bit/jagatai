@@ -25,36 +25,21 @@ func init() {
 var defaultConfig embed.FS
 
 const (
-	FLAG_PROVIDER_KEY      = "p_key"
-	FLAG_PROVIDER_ENDPOINT = "p_addr"
-	FLAG_PROVIDER_NAME     = "p_name"
-	FLAG_PROVIDER_MODEL    = "p_model"
+	FLAG_PROVIDER_KEY      = "provider.apikey"
+	FLAG_PROVIDER_ENDPOINT = "provider.endpoint"
+	FLAG_PROVIDER_NAME     = "provider.name"
+	FLAG_PROVIDER_MODEL    = "provider.model"
 
-	FLAG_SERVER_ADDRESS     = "addr"
-	FLAG_SERVER_DEBUG       = "debug"
+	FLAG_SERVER_ADDRESS     = "server.address"
+	FLAG_SERVER_DEBUG       = "server.debug"
 	FLAG_SERVER_CONFIG_FILE = "config"
 
-	FLAG_OBSERVE_ENABLE         = "observe"
-	FLAG_OBSERVE_TRACEENDPOINT  = "traceendpoint"
-	FLAG_OBSERVE_METER_ENDPOINT = "metricendpoint"
+	FLAG_METRIC_PROMETHEUS = "metric.prometheus"
+	FLAG_TRACE_JAEGER      = "trace.jaeger"
 )
 
 // Defined set of flags for jagat configuration use.
 var FlagSet = pflag.NewFlagSet("Jagat_Flags", pflag.PanicOnError)
-
-var flagToConfigKeyMap = map[string]string{
-	FLAG_PROVIDER_KEY:      "provider.apikey",
-	FLAG_PROVIDER_ENDPOINT: "provider.endpoint",
-	FLAG_PROVIDER_NAME:     "provider.name",
-	FLAG_PROVIDER_MODEL:    "provider.model",
-
-	FLAG_SERVER_ADDRESS: "server.address",
-	FLAG_SERVER_DEBUG:   "server.debug",
-	// FLAG_SERVER_CONFIG_FILE: "config",
-
-	FLAG_OBSERVE_ENABLE:        "observe.enable",
-	FLAG_OBSERVE_TRACEENDPOINT: "",
-}
 
 func defineFlags() {
 	// server
@@ -68,7 +53,8 @@ func defineFlags() {
 	FlagSet.String(FLAG_PROVIDER_MODEL, "", "provider's model name")
 
 	//observe
-	FlagSet.Bool(FLAG_OBSERVE_ENABLE, false, "enable observability default false")
+	FlagSet.Bool(FLAG_METRIC_PROMETHEUS, false, "enable default prometheus")
+	FlagSet.Bool(FLAG_TRACE_JAEGER, false, "enable default jaeger exporter")
 }
 
 // load configuration from default embedded config.yaml, provided config.yaml, env and flags before validation.
@@ -76,23 +62,21 @@ func LoadAndValidate(flags *pflag.FlagSet) (*jagat.Config, error) {
 	v := viper.New()
 	v.SetConfigType("yaml")
 
-	// 3. Bind env variable
+	// Bind env variable
 	v.SetEnvPrefix("JAGATAI")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	// 4. Bind Pflags flags
-	for flagName, configKey := range flagToConfigKeyMap {
-		v.BindPFlag(configKey, flags.Lookup(flagName))
-	}
+	// Bind Pflags flags
+	v.BindPFlags(flags)
 
-	// 1. Set default value by reading from the embedded config.yaml
+	// Set default value by reading from the embedded config.yaml
 	defaultBytes, _ := defaultConfig.ReadFile("jagat_server_config.yaml")
 	if err := v.ReadConfig(bytes.NewReader(defaultBytes)); err != nil {
 		return nil, fmt.Errorf("failed to read default config: %w", err)
 	}
 
-	// 2.Set from external config file if provided
+	// Set from external config file if provided
 	configFile, _ := flags.GetString(FLAG_SERVER_CONFIG_FILE)
 	if configFile != "" {
 		f, err := os.Open(configFile)

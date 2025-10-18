@@ -14,7 +14,9 @@ type Config struct {
 	Server   ServerConfig     `yaml:"server"`
 	Provider Provider         `yaml:"provider"`
 	Tools    []tooldef.Config `yaml:"tools"`
-	Observe  ObsConfig        `yaml:"observability"`
+	// Observe  ObsConfig        `yaml:"observability"`
+	Metric Metric
+	Trace  Trace
 }
 
 // jagat server config
@@ -37,7 +39,7 @@ type ObsConfig struct {
 	// if not set but enable will use stdout
 	Exporter string
 	// http endpoint exporter
-	TraceEndpoint   string
+	TraceEndpoint string
 	//
 	MetricsEndpoint string
 	// secure endpoint (https)

@@ -40,7 +40,7 @@ func TestLoadAndValidate_Old(t *testing.T) {
 	// --- Test Case 2: Flag overrides config file ---
 	t.Run("flag overrides config file", func(t *testing.T) {
 		flags := newTestFlagSet()
-		flags.Parse([]string{"--addr", "localhost:9999", "--debug=true"})
+		flags.Parse([]string{"--server.address", "localhost:9999", "--server.debug=true"})
 		cfg, err := LoadAndValidate(flags)
 
 		require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestLoadAndValidate_Old(t *testing.T) {
 		t.Setenv("JAGATAI_SERVER_ADDRESS", "0.0.0.0:8080")
 
 		flags := newTestFlagSet()
-		flags.Parse([]string{"--p_model", "claude-3"})
+		flags.Parse([]string{"--provider.model", "claude-3"})
 
 		cfg, err := LoadAndValidate(flags)
 
