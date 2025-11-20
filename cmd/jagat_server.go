@@ -36,6 +36,8 @@ const (
 
 	FLAG_METRIC_PROMETHEUS = "metric.prometheus"
 	FLAG_TRACE_JAEGER      = "trace.jaeger"
+
+	FLAG_MCP_ENDPOINT = "mcp.endpoint"
 )
 
 // Defined set of flags for jagat configuration use.
@@ -51,6 +53,9 @@ func defineFlags() {
 	FlagSet.String(FLAG_PROVIDER_KEY, "", "provider's api key")
 	FlagSet.String(FLAG_PROVIDER_NAME, "", "provider's name")
 	FlagSet.String(FLAG_PROVIDER_MODEL, "", "provider's model name")
+
+	//mcp
+	FlagSet.String(FLAG_MCP_ENDPOINT, "", "mcp server endpoint")
 
 	//observe
 	FlagSet.Bool(FLAG_METRIC_PROMETHEUS, false, "enable default prometheus")
@@ -110,13 +115,13 @@ var ServerCMD = cobra.Command{
 		cfg, err := LoadAndValidate(cmd.Flags())
 		if err != nil {
 			slog.Error(err.Error())
-			// return err
+			return
 		}
 
 		j, err := jagat.NewHttp(ctx, *cfg)
 		if err != nil {
 			slog.Error(err.Error())
-			// return err
+			return
 		}
 
 		go func() {

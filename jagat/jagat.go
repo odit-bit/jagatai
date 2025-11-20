@@ -12,7 +12,7 @@ import (
 )
 
 type jagat struct {
-	Agent
+	agent Agent
 }
 
 type Agent interface {
@@ -52,22 +52,43 @@ func New(ctx context.Context, cfg *Config) (*jagat, error) {
 		return nil, err
 	}
 
-	// tools
+	// Tools & MCP
 	t, err := tooldef.Build(ctx, cfg.Tools)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, err
 	}
-	toolOpt := agent.WithTool(t...)
+
+	if cfg.MCP.Endpoint != "" {
+		// add more tool via mcp
+		tr, err := tooldef.NewMCPRegistry(ctx, cfg.MCP)
+		if err != nil {
+			return nil, err
+		}
+
+		t, err = tr.ListTools(ctx, t)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Agent
 	if cfg.Server.Debug {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 		slog.Debug("tools", "list", tooldef.RegisteredTools())
 	}
 
-	// agent
-	a := agent.New(provider, toolOpt)
+	a := agent.New(
+		provider,
+		agent.WithTools(t...),
+		agent.WithMaxToolCall(3),
+	)
 
 	return &jagat{
-		Agent: a,
+		agent: &a,
 	}, nil
+}
+
+func (j *jagat) Completion(ctx context.Context, msgs []*agent.Message) (*agent.Message, error) {
+	return j.agent.Completion(ctx, msgs)
 }

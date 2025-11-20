@@ -144,7 +144,7 @@ func TestAgent_Completions(t *testing.T) {
 			// require.NoError(t, err)
 			// a.SetProvider(tc.provider) // Helper function to set the provider for testing
 
-			a := agent.New(tc.provider, agent.WithTool(tp...))
+			a := agent.New(tc.provider, agent.WithTools(tp...))
 
 			msg, err := a.Completion(context.Background(), tc.req.Messages)
 
