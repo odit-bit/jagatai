@@ -63,11 +63,6 @@ func Build(ctx context.Context, cfgs []Config) ([]agent.ToolProvider, error) {
 
 	for _, cfg := range cfgs {
 		if fn, ok := providers[cfg.Name]; ok {
-
-			// if cfg.Name == "tavily" {
-			// 	log.Println(cfg)
-			// }
-
 			p, err := fn(cfg)
 			if err != nil {
 				return nil, fmt.Errorf("tool_provider err: %w", err)

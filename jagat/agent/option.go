@@ -5,18 +5,19 @@ type options struct {
 	toolMaxCall int
 }
 
-type OptionFunc func(o *options)
-
-// bind tool into model
-func WithTool(tools ...ToolProvider) OptionFunc {
-	return func(o *options) {
-		o.tools = tools
-	}
-}
+type OptionFunc func(a *Agent) *Agent
 
 // set maximum tool call agent can invoke, not implemented yet
 func WithMaxToolCall(n int) OptionFunc {
-	return func(o *options) {
-		o.toolMaxCall = n
+	return func(a *Agent) *Agent {
+		a.toolMaxCall = n
+		return a
+	}
+}
+
+func WithTools(tools ...ToolProvider) OptionFunc {
+	return func(a *Agent) *Agent {
+		a.tools = tools
+		return a
 	}
 }

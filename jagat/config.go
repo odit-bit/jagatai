@@ -11,9 +11,10 @@ import (
 
 // holds aggregats configuration across jagat environment.
 type Config struct {
-	Server   ServerConfig     `yaml:"server"`
-	Provider Provider         `yaml:"provider"`
-	Tools    []tooldef.Config `yaml:"tools"`
+	Server   ServerConfig      `yaml:"server"`
+	Provider Provider          `yaml:"provider"`
+	Tools    []tooldef.Config  `yaml:"tools"`
+	MCP      tooldef.MCPConfig `yaml:"mcp"`
 	// Observe  ObsConfig        `yaml:"observability"`
 	Metric Metric
 	Trace  Trace
@@ -27,11 +28,11 @@ type ServerConfig struct {
 
 // external llm provider
 type Provider struct {
-	Name     string        //`yaml:"name"`
-	Model    string        //`yaml:"model"`
-	ApiKey   string        //`yaml:"apikey"`
-	Endpoint string        //`yaml:"endpoint"`
-	Options  driver.Config //`yaml:"extra"`
+	Name     string
+	Model    string
+	ApiKey   string
+	Endpoint string
+	Options  driver.Config
 }
 
 type ObsConfig struct {

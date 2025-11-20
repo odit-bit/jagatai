@@ -16,23 +16,14 @@ type Agent struct {
 	toolMaxCall int
 }
 
-func New(provider Provider, opts ...OptionFunc) *Agent {
-
-	o := options{}
+func New(provider Provider, opts ...OptionFunc) Agent {
+	a := Agent{
+		mx:       sync.Mutex{},
+		provider: provider,
+	}
 
 	for _, fn := range opts {
-		fn(&o)
-	}
-
-	if o.tools == nil {
-		o.tools = Tools{}
-	}
-
-	a := &Agent{
-		mx:          sync.Mutex{},
-		provider:    provider,
-		tools:       o.tools,
-		toolMaxCall: o.toolMaxCall,
+		fn(&a)
 	}
 
 	return a
@@ -70,8 +61,7 @@ func (a *Agent) Completion(ctx context.Context, msgs []*Message) (*Message, erro
 	return a.completionDag(ctx, msgs)
 }
 
-
-//Deprecate, subjet to remove.
+// Deprecate, subjet to remove.
 func (a *Agent) completion(ctx context.Context, msgs []*Message) (*Message, error) {
 	currentHistory := make([]*Message, len(msgs))
 	copy(currentHistory, msgs)
